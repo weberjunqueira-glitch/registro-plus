@@ -1,0 +1,1448 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+<meta name="theme-color" content="#1A3C6E" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Portal de Oportunidades" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<title>Portal de Registro de Oportunidades</title>
+
+<!-- ====================================================================== -->
+<!-- CONFIGURACAO: cole aqui suas 2 chaves do Supabase                       -->
+<!-- (Supabase > Project Settings > API)                                     -->
+<!-- ====================================================================== -->
+<script>
+  window.SUPABASE_URL = "https://ulkvxnulvbyifeihznem.supabase.co";
+  window.SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsa3Z4bnVsdmJ5aWZlaWh6bmVtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MDYxNzgsImV4cCI6MjA5NjE4MjE3OH0.A_nAWhjYJmJuk7paUw_wKP_FwaM2Ta7OGE41GQOo-cY";
+</script>
+
+<!-- Bibliotecas carregadas direto do navegador (sem build) -->
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.3)}100%{transform:scale(1)}}@keyframes slidedown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+  :root{--navy:#1A3C6E;--blue:#2E6CA8;--sky:#4A9FD4;--teal:#0D9488;--green:#10B981;
+    --amber:#D97706;--red:#DC2626;--slate:#334155;--muted:#94A3B8;--border:#E2E8F0;--bg:#F0F4F8;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body,#root{height:100%;}
+  body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--slate);-webkit-font-smoothing:antialiased;}
+  button{font-family:inherit;cursor:pointer;}
+  input,select,textarea{font-family:inherit;}
+  ::-webkit-scrollbar{width:8px;height:8px;}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px;}
+  .btn{border:none;border-radius:8px;padding:10px 18px;font-size:14px;font-weight:700;transition:opacity .15s;}
+  .btn:hover{opacity:.9;}.btn:disabled{opacity:.5;cursor:not-allowed;}
+  .btn-primary{background:var(--navy);color:#fff;}
+  .btn-ghost{background:#fff;color:var(--slate);border:1.5px solid var(--border);}
+  .btn-danger{background:var(--red);color:#fff;}.btn-success{background:var(--green);color:#fff;}
+  .input{width:100%;border:1.5px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;background:#fff;color:var(--slate);}
+  .input:focus{outline:none;border-color:var(--blue);}
+  .label{display:block;font-size:12px;font-weight:600;color:var(--slate);margin-bottom:5px;}
+  .card{background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.07);}
+  .container{max-width:1100px;margin:0 auto;padding:0 16px;}
+  .grid{display:grid;gap:12px;}
+  .grid-2{grid-template-columns:repeat(2,1fr);}.grid-3{grid-template-columns:repeat(3,1fr);}
+  .grid-4{grid-template-columns:repeat(4,1fr);}.grid-5{grid-template-columns:repeat(5,1fr);}
+  @media(max-width:900px){.grid-4,.grid-5,.grid-3{grid-template-columns:repeat(2,1fr);}}
+  @media(max-width:600px){.grid-2,.grid-3,.grid-4,.grid-5{grid-template-columns:1fr;}.hide-mobile{display:none!important;}}
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px;z-index:1000;}
+  .modal{background:#fff;border-radius:16px;width:100%;max-width:640px;max-height:92vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.25);}
+  .spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--navy);border-radius:50%;animation:spin .7s linear infinite;margin:40px auto;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useCallback, useMemo, useRef, createContext, useContext } = React;
+
+// ============================ CONFIG / SUPABASE =============================
+const cfgOk = window.SUPABASE_URL && !window.SUPABASE_URL.includes("COLE_AQUI")
+           && window.SUPABASE_ANON_KEY && !window.SUPABASE_ANON_KEY.includes("COLE_AQUI");
+const sb = cfgOk
+  ? window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY,
+      { auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true } })
+  : null;
+
+// ============================ CONSTANTES (politica v6) ======================
+const MAX_ACTIVE = 20;
+const CATS = {
+  cat1:{label:'CAT 1 — Especificação',short:'CAT 1',cycle:'> 12 meses',color:'#0D9488',bg:'#E8F8F5',validityDays:180,icon:'🏗️',
+    stages:['Identificação da Oportunidade','Especificação Técnica','Projeto Executivo','Aprovação de Financiamento/Licitação'],
+    discounts:{silver:'Até 5%',gold:'Até 8%',platinum:'Até 12%'}},
+  cat2:{label:'CAT 2 — Projeto Ativo',short:'CAT 2',cycle:'6 a 12 meses',color:'#2E6CA8',bg:'#EAF2FB',validityDays:120,icon:'📋',
+    stages:['Cotação','Aprovação Interna do Cliente','Negociação de Fornecimento'],
+    discounts:{silver:'Até 8%',gold:'Até 12%',platinum:'Até 15%'}},
+  cat3:{label:'CAT 3 — Venda Ativa',short:'CAT 3',cycle:'3 a 6 meses',color:'#10B981',bg:'#ECFDF5',validityDays:90,icon:'🚀',
+    stages:['Aprovação Confirmada pelo Cliente','Pedido Iminente (< 30 dias)','Aguardando Emissão de Pedido'],
+    discounts:{silver:'Até 10%',gold:'Até 15%',platinum:'Até 18%'}},
+};
+const TIERS = {
+  silver:{label:'🥉 Silver',color:'#64748B',bg:'#F1F5F9',border:'#CBD5E1'},
+  gold:{label:'🥈 Gold',color:'#B45309',bg:'#FEF3C7',border:'#FCD34D'},
+  platinum:{label:'🥇 Platinum',color:'#4338CA',bg:'#EDE9FE',border:'#A5B4FC'},
+};
+const STATUS = {
+  pendente:{label:'Pendente',color:'#D97706',bg:'#FEF3C7'},
+  aprovado:{label:'Aprovado',color:'#059669',bg:'#D1FAE5'},
+  rejeitado:{label:'Rejeitado',color:'#DC2626',bg:'#FEE2E2'},
+  reprovado:{label:'Reprovado',color:'#DC2626',bg:'#FEE2E2'},
+  suspenso:{label:'Suspenso',color:'#DC2626',bg:'#FEE2E2'},
+  conflito:{label:'Conflito',color:'#DC2626',bg:'#FEE2E2'},
+  convertido:{label:'Convertido',color:'#4338CA',bg:'#EDE9FE'},
+  encerrado:{label:'Encerrado',color:'#64748B',bg:'#F1F5F9'},
+  expirado:{label:'Expirado',color:'#991B1B',bg:'#FEE2E2'},
+};
+const EVIDENCE_TYPES = [
+  {id:'visita',label:'Visita Técnica Documentada',cats:['cat1','cat2','cat3']},
+  {id:'email',label:'E-mail / Contato Formal',cats:['cat1','cat2','cat3']},
+  {id:'projetista',label:'Indicação do Projetista',cats:['cat1','cat2','cat3']},
+  {id:'proposta',label:'Proposta Técnica Entregue',cats:['cat2','cat3'],mandatoryFor:['cat2','cat3']},
+];
+const BUILDING_TYPES = ['Hotel','Prédio Comercial','Galpão / Logística','Shopping Center','Hospital / Clínica','Escola / Universidade','Condomínio','Governo / Público','Outro'];
+const SISTEMAS = {
+  cftv:{label:'CFTV',icon:'📹',itens:[{key:'cameras',label:'Câmeras'},{key:'gravadores',label:'Gravadores (NVR/DVR)'}],
+    marcas:['Hikvision','Intelbras','Dahua','Axis','Bosch','Hanwha','Outro']},
+  incendio:{label:'Detecção de Incêndio',icon:'🔥',itens:[{key:'paineis',label:'Painéis'},{key:'dispositivos',label:'Dispositivos (detectores/acionadores)'}],
+    marcas:['Notifier','Morley','Silent Knight','Farenhyt','Xtralis (Vesda e/ou OSID)','LionTamer','ESSER','Outro']},
+  acesso:{label:'Controle de Acesso',icon:'🚪',itens:[{key:'portas',label:'Portas'},{key:'leitoras',label:'Leitoras'},{key:'catracas',label:'Catracas'}],
+    marcas:['HID','Control iD','Intelbras','Nice/Linear','ZKTeco','Honeywell','Outro']},
+  automacao:{label:'Automação',icon:'⚙️',itens:[{key:'controladores',label:'Controladores'},{key:'sensores',label:'Sensores'},{key:'valvulas',label:'Válvulas'}],
+    marcas:['KNX','Crestron','Control4','Lutron','Savant','Outro']},
+  fechaduras:{label:'Fechaduras',icon:'🔐',itens:[{key:'fechaduras',label:'Fechaduras'},{key:'controladoras',label:'Controladoras'}],
+    marcas:['Outro']},
+};
+const TIPOS_ATUALIZACAO = ['Reunião','Visita','Nova documentação/proposta','Revisão documentação/proposta'];
+const BENEFICIOS = {
+  silver:['Registro de até 20 projetos ativos','Descontos de registro (CAT1 5% · CAT2 8% · CAT3 10%)','Suporte comercial padrão','Acesso ao portal de oportunidades'],
+  gold:['Tudo do Silver','Descontos maiores (CAT1 8% · CAT2 12% · CAT3 15%)','Prioridade na análise de registros','Apoio em especificação técnica'],
+  platinum:['Tudo do Gold','Maiores descontos (CAT1 12% · CAT2 15% · CAT3 18%)','Gerente de canal dedicado','Participação em treinamentos e lançamentos','Leads qualificados repassados pelo fabricante'],
+};
+const calcScore = ({converted=0,closed=0}) => closed>0 ? Math.round((converted/closed)*100) : 0;
+const daysLeft = d => Math.ceil((new Date(d)-new Date())/86400000);
+const calcExpiry = c => new Date(Date.now()+CATS[c].validityDays*86400000).toISOString();
+
+// ============================ BADGES ========================================
+const StatusBadge = ({status}) => { const s=STATUS[status]||STATUS.pendente;
+  return <span style={{display:'inline-flex',alignItems:'center',gap:4,padding:'2px 9px',borderRadius:99,fontSize:11,fontWeight:700,color:s.color,background:s.bg}}>
+    <span style={{width:5,height:5,borderRadius:'50%',background:s.color}}/>{s.label}</span>; };
+const CatBadge = ({cat}) => { const c=CATS[cat]; if(!c)return null;
+  return <span style={{display:'inline-flex',alignItems:'center',gap:4,padding:'2px 8px',borderRadius:99,fontSize:11,fontWeight:700,color:c.color,background:c.bg}}>{c.icon} {c.short}</span>; };
+const TierBadge = ({tier}) => { const t=TIERS[tier]; if(!t)return null;
+  return <span style={{display:'inline-flex',alignItems:'center',gap:4,padding:'2px 10px',borderRadius:99,fontSize:11,fontWeight:700,color:t.color,background:t.bg,border:`1px solid ${t.border}`}}>{t.label}</span>; };
+
+// ============================ AUTH CONTEXT ==================================
+const AuthCtx = createContext(null);
+const useAuth = () => useContext(AuthCtx);
+
+function AuthProvider({children}){
+  const [session,setSession]=useState(null);
+  const [membership,setMembership]=useState(null);
+  const [org,setOrg]=useState(null);
+  const [loading,setLoading]=useState(true);
+
+  const loadContext = useCallback(async (uid)=>{
+    const {data,error}=await sb.from('memberships').select('*, organizations(*)').eq('user_id',uid).single();
+    if(error||!data){setMembership(null);setOrg(null);return;}
+    setMembership({id:data.id,role:data.role,full_name:data.full_name,org_id:data.org_id,is_developer:!!data.is_developer});
+    setOrg(data.organizations);
+    window.__ACTOR={id:uid,name:data.full_name,org_id:data.org_id};window.__IS_DEV=!!data.is_developer;
+  },[]);
+
+  useEffect(()=>{
+    if(!sb){setLoading(false);return;}
+    sb.auth.getSession().then(async ({data:{session}})=>{
+      setSession(session); if(session?.user) await loadContext(session.user.id); setLoading(false);
+    });
+    const {data:{subscription}}=sb.auth.onAuthStateChange(async (_e,session)=>{
+      setSession(session); if(session?.user) await loadContext(session.user.id); else {setMembership(null);setOrg(null);}
+    });
+    return ()=>subscription.unsubscribe();
+  },[loadContext]);
+
+  const signUp=async ({email,password,fullName,orgType,orgName,cnpj,phone,marcas})=>
+    sb.auth.signUp({email,password,options:{data:{full_name:fullName,org_type:orgType,org_name:orgName,cnpj,phone,marcas:marcas||{}}}});
+  const signIn=async ({email,password})=>sb.auth.signInWithPassword({email,password});
+  const signOut=async ()=>{await sb.auth.signOut();setMembership(null);setOrg(null);setSession(null);window.__ACTOR={id:null,name:null,org_id:null};};
+  const resetPasswordEmail=async (email)=>sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.href.split('#')[0]});
+  const refresh=useCallback(async ()=>{if(session?.user)await loadContext(session.user.id);},[session,loadContext]);
+
+  return <AuthCtx.Provider value={{session,user:session?.user??null,membership,org,loading,
+    isFabricante:org?.type==='fabricante',isIntegrador:org?.type==='integrador',isAdmin:membership?.role==='admin',isDeveloper:!!membership?.is_developer,
+    signUp,signIn,signOut,refresh,resetPasswordEmail}}>{children}</AuthCtx.Provider>;
+}
+
+// ============================ DATA LAYER ====================================
+// ator atual para auditoria (preenchido pelo AuthProvider)
+window.__ACTOR = { id:null, name:null, org_id:null };
+const D = {
+  audit:async(action,entity,entityId,summary,orgId)=>{
+    try{ await sb.from('audit_log').insert({
+      org_id: orgId || window.__ACTOR.org_id || null,
+      actor_id: window.__ACTOR.id || null,
+      actor_name: window.__ACTOR.name || null,
+      action, entity, entity_id: entityId!=null?String(entityId):null, summary
+    }); }catch(e){ console.error('audit',e); }
+  },
+  notify:async(orgId,title,body,icon,linkTab)=>{try{await sb.from('notifications').insert({org_id:orgId,title,body,icon:icon||'🔔',link_tab:linkTab});}catch(e){console.error('notify',e);}},
+  fetchNotifications:async(orgId)=>{const{data,error}=await sb.from('notifications').select('*').eq('org_id',orgId).order('created_at',{ascending:false}).limit(50);if(error)throw error;return data;},
+  markNotifRead:async(id)=>{await sb.from('notifications').update({read:true}).eq('id',id);},
+  markAllNotifRead:async(orgId)=>{await sb.from('notifications').update({read:true}).eq('org_id',orgId).eq('read',false);},
+  subNotifications:(orgId,cb)=>{const ch=sb.channel('notif-'+orgId).on('postgres_changes',{event:'INSERT',schema:'public',table:'notifications',filter:'org_id=eq.'+orgId},cb).subscribe();return ()=>sb.removeChannel(ch);},
+  fetchAuditLog:async(orgId)=>{const{data,error}=await sb.from('audit_log').select('*').eq('org_id',orgId).order('created_at',{ascending:false}).limit(300);if(error)throw error;return data;},
+  fetchChannelIntegrators:async(fabId)=>{const{data,error}=await sb.from('channel_links')
+    .select('*, integrador:organizations!channel_links_integrador_id_fkey(*)').eq('fabricante_id',fabId).order('requested_at',{ascending:false});if(error)throw error;return data;},
+  fetchMyFabricantes:async(intId)=>{const{data,error}=await sb.from('channel_links')
+    .select('*, fabricante:organizations!channel_links_fabricante_id_fkey(*)').eq('integrador_id',intId).order('requested_at',{ascending:false});if(error)throw error;return data;},
+  listAllFabricantes:async()=>{const{data,error}=await sb.from('organizations').select('id,name,cnpj,logo_path').eq('type','fabricante').order('name');if(error)throw error;return data;},
+  searchFabricantes:async(term)=>{const{data,error}=await sb.from('organizations')
+    .select('id,name,cnpj').eq('type','fabricante').ilike('name',`%${term}%`).limit(10);if(error)throw error;return data;},
+  requestLink:async(fabId,intId,intNome)=>{const{error}=await sb.from('channel_links').insert({fabricante_id:fabId,integrador_id:intId,status:'pendente'});if(error)throw error;await D.notify(fabId,'Nova solicitação de vínculo',(intNome||'Um integrador')+' solicitou vínculo ao seu canal.','🤝','integradores');},
+  setLinkStatus:async(id,status,nome,antes)=>{const f={status};if(status==='aprovado'){f.approved_at=new Date().toISOString();}const{error}=await sb.from('channel_links').update(f).eq('id',id);if(error)throw error;const STL={pendente:'Pendente',aprovado:'Aprovado',rejeitado:'Rejeitado',suspenso:'Suspenso'};await D.audit('integrador.status','vinculo',id,'Integrador '+(nome||'')+(antes?' — status: '+(STL[antes]||antes)+' → '+(STL[status]||status):' → '+(STL[status]||status)));try{const{data:lk}=await sb.from('channel_links').select('integrador_id, fabricante:organizations!channel_links_fabricante_id_fkey(name)').eq('id',id).single();if(lk?.integrador_id){const fn=lk.fabricante?.name||'O fabricante';if(status==='aprovado')await D.notify(lk.integrador_id,'Vínculo aprovado 🤝',fn+' aprovou seu vínculo. Você já pode registrar projetos.','🤝','canais');else if(status==='suspenso')await D.notify(lk.integrador_id,'Vínculo suspenso',fn+' suspendeu seu vínculo.','⚠️','canais');else if(status==='rejeitado')await D.notify(lk.integrador_id,'Vínculo recusado',fn+' recusou seu vínculo.','❌','canais');}}catch(e){}},
+  deleteLink:async(id)=>{const{error}=await sb.from('channel_links').delete().eq('id',id);if(error)throw error;await D.audit('integrador.excluir','vinculo',id,'Excluiu o vínculo com um integrador');},
+  saveLinkDescontos:async(id,descontos)=>{const{error}=await sb.from('channel_links').update({descontos}).eq('id',id);if(error)throw error;},
+  setLinkTier:async(id,tier,nome,antes)=>{const{error}=await sb.from('channel_links').update({tier}).eq('id',id);if(error)throw error;const TL={silver:'Silver',gold:'Gold',platinum:'Platinum'};await D.audit('integrador.tier','vinculo',id,'Integrador '+(nome||'')+' — nível: '+(TL[antes]||antes||'—')+' → '+(TL[tier]||tier));},
+  fetchProjects:async(linkId)=>{let q=sb.from('projects').select('*, evidences(*), project_updates(*), channel_links(integrador:organizations!channel_links_integrador_id_fkey(name))').order('registered_at',{ascending:false});if(linkId)q=q.eq('link_id',linkId);const{data,error}=await q;if(error)throw error;return data;},
+  fetchMyProjectsAll:async(intId)=>{const{data:links}=await sb.from('channel_links').select('id, fabricante:organizations!channel_links_fabricante_id_fkey(name)').eq('integrador_id',intId);const ids=(links||[]).map(l=>l.id);if(!ids.length)return [];const nameById={};(links||[]).forEach(l=>{nameById[l.id]=l.fabricante?.name;});const{data,error}=await sb.from('projects').select('*, evidences(*), project_updates(*)').in('link_id',ids).order('registered_at',{ascending:false});if(error)throw error;return (data||[]).map(p=>({...p,_fabricante:nameById[p.link_id]||'—'}));},
+  fetchProjectById:async(id)=>{const{data,error}=await sb.from('projects').select('*, evidences(*), project_updates(*)').eq('id',id).single();if(error)throw error;return data;},
+  createProject:async(p,evs,linkId,uid)=>{const{data,error}=await sb.from('projects').insert({link_id:linkId,title:p.title,category:p.category,status:'pendente',client_name:p.clientName,client_cnpj:p.clientCnpj,address:p.address,building_type:p.buildingType,stage:p.stage,estimated_qty:p.estimatedQty,products:p.products,distributor:p.distributor,notes:p.notes,systems:p.systems||[],contact_name:p.contactName,contact_email:p.contactEmail,contact_phone:p.contactPhone,contact_role:p.contactRole,expires_at:calcExpiry(p.category)}).select().single();if(error)throw error;if(evs?.length){const{error:e2}=await sb.from('evidences').insert(evs.map(t=>({project_id:data.id,type:t})));if(e2)throw e2;}await D.audit('projeto.criar','projeto',data.id,'Criou o projeto "'+(p.title||'')+'"');try{const{data:lk}=await sb.from('channel_links').select('fabricante_id').eq('id',linkId).single();if(lk?.fabricante_id)await D.notify(lk.fabricante_id,'Novo registro de projeto','Projeto "'+(p.title||'')+'" aguardando sua análise.','📁','pipeline');}catch(e){}return data;},
+  updateProject:async(id,f)=>{const{data,error}=await sb.from('projects').update(f).eq('id',id).select().single();if(error)throw error;return data;},
+  approveProject:async(id,descSys,proj)=>{const f={status:'aprovado',approved_at:new Date().toISOString(),descontos_sistema:descSys||{}};const r=await D.updateProject(id,f);const resumo=Object.entries(descSys||{}).filter(([k,v])=>v).map(([k,v])=>(SISTEMAS[k]?SISTEMAS[k].label:k)+' '+v).join(', ');await D.audit('projeto.aprovar','projeto',id,'Aprovou "'+((proj&&proj.title)||'')+'"'+(resumo?' — descontos: '+resumo:''));try{const{data:lk}=await sb.from('channel_links').select('integrador_id').eq('id',proj?.link_id||'').single();if(lk?.integrador_id)await D.notify(lk.integrador_id,'Projeto aprovado ✅','Seu projeto "'+((proj&&proj.title)||'')+'" foi aprovado'+(resumo?' com descontos: '+resumo:'')+'.','✅','projetos');}catch(e){}return r;},
+  rejectProject:async(id,motivo,titulo,proj)=>{const r=await D.updateProject(id,{status:'reprovado',reject_reason:motivo});await D.audit('projeto.reprovar','projeto',id,'Reprovou "'+(titulo||'')+'" — motivo: '+(motivo||''));try{const{data:lk}=await sb.from('channel_links').select('integrador_id').eq('id',proj?.link_id||'').single();if(lk?.integrador_id)await D.notify(lk.integrador_id,'Projeto reprovado','Seu projeto "'+(titulo||'')+'" foi reprovado. Motivo: '+(motivo||''),'❌','projetos');}catch(e){}return r;},
+  addUpdate:async(pid,text)=>{const{error}=await sb.from('project_updates').insert({project_id:pid,text});if(error)throw error;await D.updateProject(pid,{updated_at:new Date().toISOString()});await D.audit('projeto.atualizar','atualizacao',pid,'Adicionou atualização: '+text.slice(0,80));},
+  fetchMembers:async(orgId)=>{const{data,error}=await sb.from('memberships').select('*').eq('org_id',orgId).order('created_at');if(error)throw error;return data;},
+  setMemberRole:async(id,role)=>{const{error}=await sb.from('memberships').update({role}).eq('id',id);if(error)throw error;},
+  fetchPlans:async()=>{const{data,error}=await sb.from('plans').select('*').eq('active',true).order('price_cents');if(error)throw error;return data;},
+  fetchSubscription:async(fabId)=>{const{data,error}=await sb.from('subscriptions').select('*, plans(*)').eq('fabricante_id',fabId).maybeSingle();if(error)throw error;return data;},
+  changePlan:async(fabId,planId)=>{const{error}=await sb.from('subscriptions').upsert({fabricante_id:fabId,plan_id:planId,status:'active'},{onConflict:'fabricante_id'});if(error)throw error;},
+  // --- MARCAS DO FABRICANTE ---
+  fetchOrgMarcas:async(orgId)=>{const{data,error}=await sb.from('organizations').select('marcas').eq('id',orgId).single();if(error)throw error;return data?.marcas||{};},
+  saveOrgMarcas:async(orgId,marcas)=>{const{error}=await sb.from('organizations').update({marcas}).eq('id',orgId);if(error)throw error;},
+  // --- ANEXOS (PDF) ---
+  listAttachments:async(projectId)=>{const{data,error}=await sb.storage.from('anexos').list(projectId+'/',{limit:100});if(error)throw error;return data||[];},
+  uploadAttachment:async(projectId,file)=>{
+    if(file.type!=='application/pdf')throw new Error('Apenas arquivos PDF são permitidos.');
+    if(file.size>26214400)throw new Error('Arquivo muito grande (máximo 25 MB).');
+    const safe=file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+    const path=projectId+'/'+Date.now()+'_'+safe;
+    const{error}=await sb.storage.from('anexos').upload(path,file,{contentType:'application/pdf'});
+    if(error)throw error;await D.audit('anexo.adicionar','anexo',projectId,'Anexou o arquivo '+file.name);return path;},
+  signedUrl:async(path)=>{const{data,error}=await sb.storage.from('anexos').createSignedUrl(path,3600);if(error)throw error;return data.signedUrl;},
+  deleteAttachment:async(projectId,name)=>{const{error}=await sb.storage.from('anexos').remove([projectId+'/'+name]);if(error)throw error;await D.audit('anexo.remover','anexo',projectId,'Removeu o anexo '+name.replace(/^\\d+_/,''));},
+  // --- DEVELOPER ---
+  devFetchOrgs:async()=>{const{data,error}=await sb.from('organizations').select('*, memberships(id,full_name,role,user_id,is_developer)').order('created_at',{ascending:false});if(error)throw error;return data;},
+  uploadLogo:async(orgId,file)=>{const ext=(file.name.split('.').pop()||'png').toLowerCase();const path=orgId+'/logo.'+ext;const{error}=await sb.storage.from('logos').upload(path,file,{upsert:true,contentType:file.type});if(error)throw error;await sb.from('organizations').update({logo_path:path}).eq('id',orgId);return path;},
+  logoUrl:(path)=>{if(!path)return null;const{data}=sb.storage.from('logos').getPublicUrl(path);return data?.publicUrl||null;},
+  fetchInvoices:async(fabId)=>{const{data,error}=await sb.from('invoices').select('*').eq('fabricante_id',fabId).order('competencia',{ascending:false});if(error)throw error;return data;},
+  devFetchSubs:async()=>{const{data,error}=await sb.from('subscriptions').select('*, plans(*), fabricante:organizations!subscriptions_fabricante_id_fkey(id,name,cnpj,phone)');if(error)throw error;return data||[];},
+  devSetPayment:async(fabId,status)=>{const f={payment_status:status};if(status==='pago')f.last_payment_at=new Date().toISOString();if(status==='cancelado')f.canceled_at=new Date().toISOString();const{error}=await sb.from('subscriptions').update(f).eq('fabricante_id',fabId);if(error)throw error;},
+  devResetPassword:async(uid,pwd)=>D.callManageUser({action:'reset_password',target_user_id:uid,new_password:pwd}),
+  devSetDeveloper:async(mid,val)=>{const{error}=await sb.from('memberships').update({is_developer:val}).eq('id',mid);if(error)throw error;},
+  devUpdateOrg:async(orgId,fields)=>{const{error}=await sb.from('organizations').update(fields).eq('id',orgId);if(error)throw error;},
+  devCreateUserInOrg:async(orgId,email,password,full_name,role)=>D.callManageUser({action:'create_user_in_org',org_id:orgId,email,password,full_name,role}),
+  callManageUser:async(payload)=>{const{data:{session}}=await sb.auth.getSession();
+    const resp=await fetch(window.SUPABASE_URL+'/functions/v1/manage-user',{method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+(session?.access_token||''),'apikey':window.SUPABASE_ANON_KEY},
+      body:JSON.stringify(payload)});
+    const j=await resp.json();if(!resp.ok)throw new Error(j.error||'Falha na operação');return j;},
+  subProjects:(cb)=>{const ch=sb.channel('pj-rt').on('postgres_changes',{event:'*',schema:'public',table:'projects'},cb).subscribe();return ()=>sb.removeChannel(ch);},
+  subLinks:(cb)=>{const ch=sb.channel('lk-rt').on('postgres_changes',{event:'*',schema:'public',table:'channel_links'},cb).subscribe();return ()=>sb.removeChannel(ch);},
+};
+
+// ============================ AUTH SHELL / LOGIN / SIGNUP ===================
+function AuthShell({title,subtitle,children}){
+  return <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+    <div className="card" style={{width:'100%',maxWidth:440,padding:28}}>
+      <div style={{marginBottom:20}}>
+        <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>
+          <div style={{width:38,height:38,borderRadius:9,background:'var(--navy)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18}}>🔗</div>
+          <div><div style={{fontWeight:800,color:'var(--navy)',fontSize:15}}>Portal de Oportunidades</div>
+          <div style={{fontSize:10,color:'var(--muted)'}}>Programa de Canal</div></div>
+        </div>
+        <h1 style={{fontSize:22,color:'var(--navy)'}}>{title}</h1>
+        {subtitle&&<p style={{fontSize:13,color:'var(--muted)',marginTop:4}}>{subtitle}</p>}
+      </div>{children}
+    </div></div>;
+}
+const ErrBox = ({msg}) => <div style={{background:'#FEE2E2',border:'1px solid #DC2626',borderRadius:8,padding:'9px 12px',marginBottom:14,fontSize:13,color:'#7F1D1D'}}>{msg}</div>;
+const trad = (m) => /Invalid login/i.test(m)?'E-mail ou senha incorretos.':/Email not confirmed/i.test(m)?'Confirme seu e-mail antes de entrar.':/already registered/i.test(m)?'Este e-mail já está cadastrado.':/at least/i.test(m)?'A senha deve ter ao menos 6 caracteres.':m;
+
+function PasswordInput({value,onChange,placeholder,required,minLength}){
+  const [show,setShow]=useState(false);
+  return <div style={{position:'relative'}}>
+    <input className="input" style={{paddingRight:42}} type={show?'text':'password'} value={value} required={required} minLength={minLength} onChange={e=>onChange(e.target.value)} placeholder={placeholder||'••••••••'}/>
+    <button type="button" onClick={()=>setShow(s=>!s)} style={{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',fontSize:15,color:'var(--muted)'}} title={show?'Ocultar':'Mostrar'}>{show?'🙈':'👁️'}</button>
+  </div>;
+}
+function Login({go}){
+  const {signIn,resetPasswordEmail}=useAuth();
+  const [email,setEmail]=useState('');const[password,setPassword]=useState('');
+  const [err,setErr]=useState('');const[busy,setBusy]=useState(false);const[msg,setMsg]=useState('');
+  const submit=async(e)=>{e.preventDefault();setErr('');setMsg('');setBusy(true);
+    const {error}=await signIn({email,password});setBusy(false);if(error)setErr(trad(error.message));};
+  const forgot=async()=>{setErr('');setMsg('');if(!email){setErr('Digite seu e-mail no campo acima e clique de novo em "Esqueci minha senha".');return;}
+    setBusy(true);const{error}=await resetPasswordEmail(email);setBusy(false);
+    if(error)setErr(trad(error.message));else setMsg('Enviamos um link de recuperação para '+email+'. Verifique sua caixa de entrada.');};
+  return <AuthShell title="Entrar no Portal" subtitle="Acesse sua conta">
+    <form onSubmit={submit}>
+      <div style={{marginBottom:14}}><label className="label">E-mail</label>
+        <input className="input" type="email" value={email} required onChange={e=>setEmail(e.target.value)} placeholder="voce@empresa.com"/></div>
+      <div style={{marginBottom:8}}><label className="label">Senha</label>
+        <PasswordInput value={password} onChange={setPassword} required/></div>
+      <div style={{textAlign:'right',marginBottom:14}}><a onClick={forgot} style={{color:'var(--blue)',fontSize:12,fontWeight:600,cursor:'pointer'}}>Esqueci minha senha</a></div>
+      {err&&<ErrBox msg={err}/>}
+      {msg&&<div style={{background:'#D1FAE5',border:'1px solid #10B981',borderRadius:8,padding:'9px 12px',marginBottom:14,fontSize:13,color:'#166534'}}>{msg}</div>}
+      <button className="btn btn-primary" style={{width:'100%'}} disabled={busy}>{busy?'Entrando…':'Entrar'}</button>
+    </form>
+    <p style={{marginTop:18,fontSize:13,textAlign:'center',color:'var(--muted)'}}>Ainda não tem conta?{' '}
+      <a onClick={()=>go('signup')} style={{color:'var(--blue)',fontWeight:700,cursor:'pointer'}}>Cadastre-se</a></p>
+  </AuthShell>;
+}
+
+function SignUp({go}){
+  const {signUp}=useAuth();
+  const [orgType,setOrgType]=useState('');
+  const [form,setForm]=useState({fullName:'',orgName:'',cnpj:'',phone:'',email:'',password:''});
+  const [err,setErr]=useState('');const[done,setDone]=useState(false);const[busy,setBusy]=useState(false);
+  const set=(k,v)=>setForm(p=>({...p,[k]:v}));
+  const [fabSys,setFabSys]=useState({});  // {incendio:'Notifier, Morley', cftv:'...'}
+  const [logoFile,setLogoFile]=useState(null);
+  const toggleFabSys=(k)=>setFabSys(p=>{const n={...p};if(k in n)delete n[k];else n[k]='';return n;});
+  const setFabSysMarcas=(k,v)=>setFabSys(p=>({...p,[k]:v}));
+  const submit=async(e)=>{e.preventDefault();setErr('');setBusy(true);
+    const marcas={};if(orgType==='fabricante'){Object.entries(fabSys).forEach(([k,v])=>{const arr=String(v).split(',').map(s=>s.trim()).filter(Boolean);if(arr.length)marcas[k]=arr;});}
+    const {error}=await signUp({...form,orgType,marcas});
+    if(error){setBusy(false);setErr(trad(error.message));return;}
+    if(logoFile){try{const{data:{session}}=await sb.auth.getSession();if(session?.user){const{data:mem}=await sb.from('memberships').select('org_id').eq('user_id',session.user.id).single();if(mem?.org_id)await D.uploadLogo(mem.org_id,logoFile);}}catch(e){console.error('logo signup',e);}}
+    setBusy(false);setDone(true);};
+  if(done) return <AuthShell title="Conta criada!" subtitle="Falta pouco">
+    <div style={{background:'#D1FAE5',border:'1px solid #10B981',borderRadius:10,padding:16,fontSize:14,color:'#166534'}}>
+      <p style={{marginBottom:8}}><strong>Sua empresa foi cadastrada e você é o administrador dela.</strong></p>
+      <p style={{marginBottom:8}}>1. Confirme seu e-mail (se a confirmação estiver ativa).</p>
+      {orgType==='integrador'?<p>2. Ao entrar, busque os fabricantes e solicite vínculo.</p>:<p>2. Ao entrar, aprove integradores e gerencie seu plano.</p>}
+    </div>
+    <button onClick={()=>go('login')} className="btn btn-primary" style={{width:'100%',marginTop:18}}>Ir para o login</button>
+  </AuthShell>;
+  if(!orgType) return <AuthShell title="Criar conta" subtitle="Você representa qual tipo de empresa?">
+    {[['fabricante','🏭','Fabricante','Gerencio meu canal, aprovo integradores e concedo descontos.'],
+      ['integrador','🔧','Integrador','Registro oportunidades junto a um ou mais fabricantes.']].map(([t,ic,tt,d])=>
+      <button key={t} onClick={()=>setOrgType(t)} style={{display:'flex',alignItems:'center',gap:14,width:'100%',padding:16,borderRadius:12,border:'2px solid var(--border)',background:'#fff',marginBottom:10}}>
+        <div style={{fontSize:26}}>{ic}</div><div style={{textAlign:'left'}}>
+        <div style={{fontWeight:800,color:'var(--navy)',fontSize:14}}>{tt}</div>
+        <div style={{fontSize:12,color:'var(--muted)'}}>{d}</div></div></button>)}
+    <p style={{marginTop:16,fontSize:13,textAlign:'center',color:'var(--muted)'}}>Já tem conta?{' '}
+      <a onClick={()=>go('login')} style={{color:'var(--blue)',fontWeight:700,cursor:'pointer'}}>Entrar</a></p>
+  </AuthShell>;
+  return <AuthShell title={`Cadastro — ${orgType==='fabricante'?'Fabricante':'Integrador'}`} subtitle="Você será o administrador da empresa.">
+    <button onClick={()=>setOrgType('')} style={{background:'none',border:'none',color:'var(--blue)',fontSize:12,fontWeight:600,marginBottom:12,cursor:'pointer'}}>← trocar tipo</button>
+    <form onSubmit={submit}>
+      {[['Seu nome completo','fullName','text'],['Empresa (Razão Social)','orgName','text'],['CNPJ','cnpj','text'],['Telefone','phone','tel'],['E-mail','email','email']].map(([l,k,t])=>
+        <div key={k} style={{marginBottom:12}}><label className="label">{l}</label>
+          <input className="input" type={t} value={form[k]} required onChange={e=>set(k,e.target.value)}/></div>)}
+      <div style={{marginBottom:12}}><label className="label">Senha</label>
+        <PasswordInput value={form.password} onChange={v=>set('password',v)} required minLength={6}/></div>
+      {orgType==='fabricante'&&<div style={{marginBottom:12}}>
+        <label className="label">Sistemas que você fabrica (selecione e informe as marcas)</label>
+        {Object.entries(SISTEMAS).map(([sk,sd])=>{const on=sk in fabSys;return <div key={sk} style={{border:`2px solid ${on?'var(--navy)':'var(--border)'}`,borderRadius:9,padding:9,marginBottom:7,background:on?'#EAF2FB':'#fff'}}>
+          <button type="button" onClick={()=>toggleFabSys(sk)} style={{display:'flex',alignItems:'center',gap:8,width:'100%',background:'none',border:'none',textAlign:'left'}}>
+            <div style={{width:17,height:17,borderRadius:4,border:`2px solid ${on?'var(--navy)':'#CBD5E1'}`,background:on?'var(--navy)':'#fff',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{on&&<span style={{color:'#fff',fontSize:10}}>✓</span>}</div>
+            <span style={{fontSize:13,fontWeight:700,color:'#1E293B'}}>{sd.icon} {sd.label}</span></button>
+          {on&&<input className="input" style={{marginTop:8,fontSize:12}} placeholder="Marcas separadas por vírgula (ex.: Notifier, Morley)" value={fabSys[sk]} onChange={e=>setFabSysMarcas(sk,e.target.value)}/>}
+        </div>;})}
+        <div style={{fontSize:10,color:'var(--muted)'}}>Você poderá editar isso depois na aba “Marcas”.</div>
+      </div>}
+      {orgType==='fabricante'&&<div style={{marginBottom:12}}>
+        <label className="label">Logo da empresa (opcional)</label>
+        <div style={{display:'flex',alignItems:'center',gap:12}}>
+          {logoFile?<img src={URL.createObjectURL(logoFile)} alt="logo" style={{width:48,height:48,borderRadius:9,objectFit:'cover',border:'1px solid var(--border)'}}/>:<div style={{width:48,height:48,borderRadius:9,background:'#F1F5F9',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20}}>🏭</div>}
+          <label className="btn btn-ghost" style={{fontSize:12,cursor:'pointer'}}>{logoFile?'Trocar imagem':'Escolher imagem'}
+            <input type="file" accept="image/*" style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f){if(!f.type.startsWith('image/')){alert('Selecione uma imagem.');return;}if(f.size>2097152){alert('Máximo 2 MB.');return;}setLogoFile(f);}e.target.value='';}}/></label>
+          {logoFile&&<button type="button" onClick={()=>setLogoFile(null)} style={{background:'none',border:'none',color:'#DC2626',fontSize:12,cursor:'pointer'}}>remover</button>}
+        </div>
+        <div style={{fontSize:10,color:'var(--muted)',marginTop:6}}>PNG/JPG até 2MB. Se a confirmação de e-mail estiver ativa, envie a logo depois na aba “Marcas”.</div>
+      </div>}
+      {err&&<ErrBox msg={err}/>}
+      <button className="btn btn-primary" style={{width:'100%',marginTop:6}} disabled={busy}>{busy?'Enviando…':'Criar conta'}</button>
+    </form>
+  </AuthShell>;
+}
+
+// ============================ HEADER ========================================
+function ProfileModal({onClose}){
+  const {org,membership,isFabricante,isAdmin,user,signOut}=useAuth();
+  const [sub,setSub]=useState(null);const[plans,setPlans]=useState([]);const[active,setActive]=useState(0);
+  const [loading,setLoading]=useState(true);const[busy,setBusy]=useState(false);
+  useEffect(()=>{(async()=>{try{
+    if(isFabricante){const[s,p,ints]=await Promise.all([D.fetchSubscription(org.id),D.fetchPlans(),D.fetchChannelIntegrators(org.id)]);
+      setSub(s);setPlans(p);setActive((ints||[]).filter(l=>l.status==='aprovado').length);}
+  }catch(e){console.error(e);}finally{setLoading(false);}})();},[]);
+  const fmt=(c)=>'R$ '+((c||0)/100).toLocaleString('pt-BR',{minimumFractionDigits:0});
+  const trocar=async(pid)=>{if(!confirm('Mudar para este plano?'))return;setBusy(true);try{await D.changePlan(org.id,pid);const s=await D.fetchSubscription(org.id);setSub(s);alert('Plano atualizado!');}catch(e){alert('Erro: '+e.message);}finally{setBusy(false);}};
+  const exportarDados=async()=>{
+    setBusy(true);
+    try{
+      const dados={ gerado_em:new Date().toISOString(), usuario:{nome:membership?.full_name,email:user?.email,papel:membership?.role}, empresa:{nome:org?.name,cnpj:org?.cnpj,telefone:org?.phone,tipo:org?.type} };
+      try{ if(isFabricante){ dados.projetos=await D.fetchProjects(); } else { dados.projetos=await D.fetchMyProjectsAll(org.id); } }catch(e){}
+      const blob=new Blob([JSON.stringify(dados,null,2)],{type:'application/json'});
+      const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='meus-dados-'+(org?.name||'portal')+'.json';a.click();URL.revokeObjectURL(url);
+    }catch(e){alert('Erro ao exportar: '+e.message);}finally{setBusy(false);}
+  };
+  const excluirConta=async()=>{
+    if(isAdmin){
+      if(!confirm('ATENÇÃO: como administrador, isso vai EXCLUIR a empresa "'+org.name+'" inteira — todos os usuários, vínculos e projetos. Não há volta. Confirmar?'))return;
+      if(!confirm('Tem certeza absoluta? Digite OK na próxima caixa para confirmar.'))return;
+      setBusy(true);try{await D.callManageUser({action:'delete_own_org'});alert('Empresa excluída.');await signOut();}catch(e){alert('Erro: '+e.message);setBusy(false);}
+    }else{
+      if(!confirm('Excluir o seu acesso? Você sairá e sua conta de usuário será removida. Os dados da empresa permanecem. Confirmar?'))return;
+      setBusy(true);try{await D.callManageUser({action:'delete_self'});alert('Sua conta foi removida.');await signOut();}catch(e){alert('Erro: '+e.message);setBusy(false);}
+    }
+  };
+  return <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}><div className="modal" style={{maxWidth:560}}>
+    <div style={{padding:'16px 22px',borderBottom:'1px solid var(--border)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+      <div style={{fontWeight:800,fontSize:17,color:'#1E293B'}}>Meu perfil</div>
+      <button onClick={onClose} style={{background:'none',border:'none',fontSize:18,color:'var(--muted)'}}>✕</button>
+    </div>
+    <div style={{padding:20,display:'flex',flexDirection:'column',gap:16}}>
+      <div>
+        <div style={{fontWeight:700,fontSize:13,color:'#1E293B',marginBottom:8}}>Dados de cadastro</div>
+        <div className="grid grid-2" style={{gap:8}}>
+          {[['Nome',membership?.full_name],['E-mail',user?.email],['Empresa',org?.name],['CNPJ',org?.cnpj||'—'],['Telefone',org?.phone||'—'],['Tipo',isFabricante?'Fabricante':'Integrador'],['Papel',isAdmin?'Administrador':'Usuário']].map(([l,v])=>
+            <div key={l} style={{background:'#F8FAFC',borderRadius:7,padding:'9px 11px'}}><div style={{fontSize:10,color:'var(--muted)',fontWeight:600}}>{l}</div><div style={{fontSize:12,color:'#1E293B',fontWeight:500}}>{v}</div></div>)}
+        </div>
+      </div>
+      {isFabricante&&<div>
+        <div style={{fontWeight:700,fontSize:13,color:'#1E293B',marginBottom:8}}>Plano</div>
+        {loading?<div className="spinner"/>:<>
+          <div style={{background:'#EAF2FB',border:'1px solid var(--blue)',borderRadius:10,padding:14,marginBottom:12}}>
+            <div style={{fontSize:11,color:'var(--muted)',fontWeight:600}}>Plano atual</div>
+            <div style={{fontSize:15,fontWeight:800,color:'var(--navy)'}}>{sub?.plans?.name||'—'}</div>
+            <div style={{fontSize:12,color:'var(--slate)',marginTop:2}}>{sub?.plans?fmt(sub.plans.price_cents)+'/mês':''} · {active} de {sub?.plans?.max_integrators||'—'} integradores ativos</div>
+          </div>
+          <div style={{fontSize:12,color:'var(--muted)',fontWeight:600,marginBottom:8}}>Planos disponíveis</div>
+          <div style={{display:'flex',flexDirection:'column',gap:8}}>
+            {plans.map(p=>{const atual=p.id===sub?.plan_id;const insuf=active>p.max_integrators;return <div key={p.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',border:`1.5px solid ${atual?'var(--navy)':'var(--border)'}`,borderRadius:9,padding:'10px 13px',background:atual?'#EAF2FB':'#fff'}}>
+              <div><div style={{fontSize:13,fontWeight:700,color:'#1E293B'}}>{p.name}</div><div style={{fontSize:12,color:'var(--blue)',fontWeight:700}}>{fmt(p.price_cents)}<span style={{color:'var(--muted)',fontWeight:400}}>/mês</span></div></div>
+              {atual?<span style={{fontSize:11,color:'var(--navy)',fontWeight:700}}>Plano atual</span>:
+                <button className="btn btn-primary" style={{fontSize:12}} disabled={busy||insuf} onClick={()=>trocar(p.id)} title={insuf?'Você tem mais integradores que o limite deste plano':''}>{insuf?'Limite menor':'Escolher'}</button>}
+            </div>;})}
+          </div>
+        </>}
+      </div>}
+      <div style={{borderTop:'1px solid var(--border)',paddingTop:14,marginTop:4}}>
+        <div style={{fontWeight:700,fontSize:13,color:'#1E293B',marginBottom:6}}>Seus dados (LGPD)</div>
+        <div style={{fontSize:11,color:'var(--muted)',marginBottom:10}}>Baixe uma cópia dos seus dados em formato JSON.</div>
+        <button className="btn btn-ghost" disabled={busy} onClick={exportarDados} style={{marginBottom:18}}>⬇️ Exportar meus dados</button>
+        <div style={{fontWeight:700,fontSize:13,color:'#991B1B',marginBottom:6}}>Zona de risco</div>
+        <div style={{fontSize:11,color:'var(--muted)',marginBottom:10}}>{isAdmin?'Como administrador, excluir sua conta remove a empresa inteira e todos os dados.':'Excluir sua conta remove apenas o seu acesso. Os dados da empresa permanecem.'}</div>
+        <button className="btn btn-danger" disabled={busy} onClick={excluirConta}>{isAdmin?'Excluir empresa e minha conta':'Excluir minha conta'}</button>
+      </div>
+    </div>
+  </div></div>;
+}
+function NotificationBell(){
+  const {org}=useAuth();
+  const [items,setItems]=useState([]);const[open,setOpen]=useState(false);const[anim,setAnim]=useState(false);
+  const audioRef=useRef(null);
+  const load=useCallback(async()=>{if(!org)return;try{setItems(await D.fetchNotifications(org.id));}catch(e){console.error(e);}},[org]);
+  useEffect(()=>{load();},[load]);
+  useEffect(()=>{if(!org)return;return D.subNotifications(org.id,(payload)=>{
+    setItems(prev=>[payload.new,...prev]);
+    setAnim(true);setTimeout(()=>setAnim(false),900);
+    try{audioRef.current&&audioRef.current.play().catch(()=>{});}catch(e){}
+  });},[org]);
+  const unread=items.filter(i=>!i.read).length;
+  const abrir=async()=>{const novo=!open;setOpen(novo);if(novo&&unread>0&&org){try{await D.markAllNotifRead(org.id);setItems(prev=>prev.map(i=>({...i,read:true})));}catch(e){}}};
+  // som curto em base64 (bip suave)
+  const SND='data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+  return <div style={{position:'relative'}}>
+    <audio ref={audioRef} src={SND} preload="auto"/>
+    <button onClick={abrir} style={{position:'relative',background:'none',border:'none',cursor:'pointer',fontSize:20,padding:4,transition:'transform .2s',transform:anim?'scale(1.25) rotate(-10deg)':'none'}} title="Notificações">🔔
+      {unread>0&&<span style={{position:'absolute',top:-2,right:-2,background:'#DC2626',color:'#fff',borderRadius:99,fontSize:9,fontWeight:800,minWidth:16,height:16,display:'flex',alignItems:'center',justifyContent:'center',padding:'0 4px',animation:anim?'pulse .9s':'none'}}>{unread>9?'9+':unread}</span>}
+    </button>
+    {open&&<><div onClick={()=>setOpen(false)} style={{position:'fixed',inset:0,zIndex:60}}/>
+      <div style={{position:'absolute',right:0,top:36,width:300,maxHeight:380,overflowY:'auto',background:'#fff',borderRadius:12,boxShadow:'0 10px 40px rgba(0,0,0,.18)',zIndex:61,animation:'slidedown .2s ease'}}>
+        <div style={{padding:'12px 14px',borderBottom:'1px solid var(--border)',fontWeight:700,fontSize:13,color:'#1E293B',position:'sticky',top:0,background:'#fff'}}>Notificações</div>
+        {items.length===0?<div style={{padding:24,textAlign:'center',color:'var(--muted)',fontSize:12}}>Nenhuma notificação ainda.</div>:
+          items.map(n=><div key={n.id} style={{padding:'11px 14px',borderBottom:'1px solid #F1F5F9',display:'flex',gap:10,alignItems:'flex-start',background:n.read?'#fff':'#EFF6FF'}}>
+            <span style={{fontSize:17}}>{n.icon||'🔔'}</span>
+            <div style={{flex:1}}><div style={{fontSize:12,fontWeight:700,color:'#1E293B'}}>{n.title}</div>
+              {n.body&&<div style={{fontSize:11,color:'var(--slate)',marginTop:2}}>{n.body}</div>}
+              <div style={{fontSize:10,color:'var(--muted)',marginTop:3}}>{new Date(n.created_at).toLocaleString('pt-BR')}</div></div>
+          </div>)}
+      </div></>}
+  </div>;
+}
+function Header({tabs,active,onTab}){
+  const {org,membership,signOut,isFabricante,isAdmin}=useAuth();
+  const [showProfile,setShowProfile]=useState(false);
+  return <header style={{background:'linear-gradient(135deg,#1A3C6E,#2E6CA8)',position:'sticky',top:0,zIndex:50}}>
+    <div className="container" style={{display:'flex',alignItems:'center',justifyContent:'space-between',height:56}}>
+      <div style={{display:'flex',alignItems:'center',gap:10}}>
+        {org?.logo_path?<img src={D.logoUrl(org.logo_path)} alt="logo" style={{width:32,height:32,borderRadius:7,objectFit:'cover',background:'#fff'}}/>:<div style={{width:32,height:32,borderRadius:7,background:'rgba(255,255,255,.15)',display:'flex',alignItems:'center',justifyContent:'center'}}>{isFabricante?'🏭':'🔧'}</div>}
+        <div><div style={{color:'#fff',fontWeight:800,fontSize:13}}>{org?.name}</div>
+          <div style={{color:'rgba(255,255,255,.6)',fontSize:9}}>{isFabricante?'Painel do Fabricante':'Painel do Integrador'}</div></div>
+      </div>
+      <div style={{display:'flex',alignItems:'center',gap:10}}>
+        <NotificationBell/>
+        <button onClick={()=>setShowProfile(true)} style={{textAlign:'right',background:'none',border:'none',cursor:'pointer'}}>
+          <div style={{color:'#fff',fontSize:12,fontWeight:700}}>{membership?.full_name}{isAdmin&&<span style={{fontSize:9,marginLeft:5,padding:'1px 6px',borderRadius:99,background:'rgba(255,255,255,.2)'}}>admin</span>}</div>
+          <div style={{color:'rgba(255,255,255,.6)',fontSize:10}}>{org?.cnpj||''} · ver perfil</div></button>
+        <button onClick={signOut} className="btn" style={{background:'rgba(255,255,255,.15)',color:'#fff',padding:'6px 12px',fontSize:12}}>Sair</button>
+      </div>
+    </div>
+    {tabs&&<div style={{background:'#fff',borderBottom:'1px solid var(--border)'}}>
+      <div className="container" style={{display:'flex',alignItems:'center',overflowX:'auto'}}>
+        {tabs.map(([id,label])=><button key={id} onClick={()=>onTab(id)} style={{padding:'12px 14px',border:'none',background:'none',
+          borderBottom:`3px solid ${active===id?'var(--navy)':'transparent'}`,fontSize:12,fontWeight:active===id?700:500,
+          color:active===id?'var(--navy)':'var(--muted)',whiteSpace:'nowrap'}}>{label}</button>)}
+      </div></div>}
+  {showProfile&&<ProfileModal onClose={()=>setShowProfile(false)}/>}
+  </header>;
+}
+
+// ============================ MEMBERS PANEL =================================
+function MembersPanel({orgId,myId,isAdmin}){
+  const [members,setMembers]=useState([]);const[loading,setLoading]=useState(true);const[busy,setBusy]=useState(false);const[q,setQ]=useState('');
+  const [showForm,setShowForm]=useState(false);
+  const [nf,setNf]=useState({full_name:'',email:'',password:'',role:'member'});
+  const setF=(k,v)=>setNf(p=>({...p,[k]:v}));
+  const load=useCallback(async()=>{try{setMembers(await D.fetchMembers(orgId));}finally{setLoading(false);}},[orgId]);
+  useEffect(()=>{load();},[load]);
+  const changeRole=async(id,role)=>{setBusy(true);try{await D.setMemberRole(id,role);await load();}catch(e){alert(e.message);}finally{setBusy(false);}};
+  const createUser=async()=>{if(!nf.full_name||!nf.email||!nf.password){alert('Preencha nome, e-mail e senha.');return;}
+    setBusy(true);try{const _nome=nf.full_name,_papel=nf.role;await D.callManageUser({action:'create_user',email:nf.email,password:nf.password,full_name:nf.full_name,role:nf.role});
+      await D.audit('usuario.criar','usuario',null,'Criou o usuário '+_nome+' ('+(_papel==='admin'?'Administrador':'Usuário')+')');
+      setNf({full_name:'',email:'',password:'',role:'member'});setShowForm(false);await load();alert('Usuário criado com sucesso!');}
+    catch(e){alert('Erro: '+e.message);}finally{setBusy(false);}};
+  const removeUser=async(uid,nome)=>{if(!confirm('Remover o usuário '+nome+'? Esta ação não pode ser desfeita.'))return;
+    setBusy(true);try{await D.callManageUser({action:'delete_user',target_user_id:uid});await D.audit('usuario.excluir','usuario',uid,'Removeu o usuário '+nome);await load();}
+    catch(e){alert('Erro: '+e.message);}finally{setBusy(false);}};
+  const resetPass=async(uid,nome)=>{const np=prompt('Nova senha para '+nome+' (mínimo 6 caracteres):');if(!np)return;if(np.length<6){alert('Senha muito curta.');return;}
+    setBusy(true);try{await D.callManageUser({action:'reset_password',target_user_id:uid,new_password:np});await D.audit('usuario.senha','usuario',uid,'Redefiniu a senha de '+nome);alert('Senha redefinida com sucesso.');}
+    catch(e){alert('Erro: '+e.message);}finally{setBusy(false);}};
+  if(loading)return <div className="spinner"/>;
+  return <>
+    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4,flexWrap:'wrap',gap:8}}>
+      <div style={{fontWeight:800,fontSize:17,color:'#1E293B'}}>Usuários da empresa</div>
+      {isAdmin&&<button className="btn btn-primary" style={{fontSize:13}} onClick={()=>setShowForm(s=>!s)}>{showForm?'Cancelar':'+ Novo usuário'}</button>}
+    </div>
+    <div style={{fontSize:12,color:'var(--muted)',marginBottom:16}}>Vários usuários compartilham os dados da empresa.</div>
+    {showForm&&isAdmin&&<div className="card" style={{padding:16,marginBottom:14,border:'2px solid var(--navy)'}}>
+      <div style={{fontWeight:700,fontSize:13,color:'var(--navy)',marginBottom:10}}>Criar novo usuário</div>
+      <div style={{marginBottom:10}}><label className="label">Nome completo</label><input className="input" value={nf.full_name} onChange={e=>setF('full_name',e.target.value)}/></div>
+      <div style={{marginBottom:10}}><label className="label">E-mail</label><input className="input" type="email" value={nf.email} onChange={e=>setF('email',e.target.value)}/></div>
+      <div style={{marginBottom:10}}><label className="label">Senha (mínimo 6)</label><PasswordInput value={nf.password} onChange={v=>setF('password',v)} placeholder="defina uma senha"/></div>
+      <div style={{marginBottom:12}}><label className="label">Papel</label><select className="input" value={nf.role} onChange={e=>setF('role',e.target.value)}><option value="member">Usuário</option><option value="admin">Administrador</option></select></div>
+      <button className="btn btn-success" style={{width:'100%'}} disabled={busy} onClick={createUser}>{busy?'Criando…':'Criar usuário'}</button>
+    </div>}
+    <SearchBox value={q} onChange={setQ} placeholder="Buscar usuário por nome…"/>
+    {members.filter(m=>{const t=q.trim().toLowerCase();return !t||String(m.full_name||'').toLowerCase().includes(t);}).map(m=><div key={m.id} className="card" style={{padding:14,marginBottom:8}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8}}>
+        <div><div style={{fontWeight:700,fontSize:14,color:'#1E293B'}}>{m.full_name}{m.id===myId&&<span style={{fontSize:11,color:'var(--muted)',marginLeft:6}}>(você)</span>}</div>
+          <div style={{fontSize:11,color:'var(--muted)'}}>{m.role==='admin'?'Administrador':'Usuário'}</div></div>
+        <div style={{display:'flex',gap:6,alignItems:'center'}}>
+          {isAdmin&&m.id!==myId&&<select className="input" style={{width:'auto',padding:'5px 8px',fontSize:12}} value={m.role} disabled={busy} onChange={e=>changeRole(m.id,e.target.value)}>
+            <option value="admin">Administrador</option><option value="member">Usuário</option></select>}
+          {isAdmin&&m.id!==myId&&<button className="btn btn-ghost" style={{fontSize:12,padding:'6px 10px'}} disabled={busy} onClick={()=>resetPass(m.user_id,m.full_name)}>Resetar senha</button>}
+          {isAdmin&&m.id!==myId&&<button className="btn btn-danger" style={{fontSize:12,padding:'6px 10px'}} disabled={busy} onClick={()=>removeUser(m.user_id,m.full_name)}>Remover</button>}
+        </div>
+      </div></div>)}
+  </>;
+}
+
+// ============================ MODAIS DE PROJETO =============================
+const Field=({label,req,children})=><div style={{marginBottom:12}}><label className="label">{label}{req&&<span style={{color:'#DC2626'}}> *</span>}</label>{children}</div>;
+function NewProjectModal({onClose,onCreated,tier,linkId,userId,fabricanteId,activeCount}){
+  const [fabMarcas,setFabMarcas]=useState(null);
+  useEffect(()=>{(async()=>{if(fabricanteId){try{setFabMarcas(await D.fetchOrgMarcas(fabricanteId));}catch(e){setFabMarcas({});}}})();},[fabricanteId]);
+  const [step,setStep]=useState(0);const[cat,setCat]=useState('');
+  const [form,setForm]=useState({title:'',clientName:'',clientCnpj:'',address:'',buildingType:'',stage:'',estimatedQty:'',products:'',distributor:'',notes:'',contactName:'',contactEmail:'',contactPhone:'',contactRole:''});
+  const [systems,setSystems]=useState({});  // {cftv:{cameras:'16'},...}
+  const toggleSys=(k)=>setSystems(p=>{const n={...p};if(n[k])delete n[k];else n[k]={};return n;});
+  const setSysItem=(sk,ik,v)=>setSystems(p=>({...p,[sk]:{...p[sk],[ik]:v}}));
+  const [evs,setEvs]=useState([]);const[busy,setBusy]=useState(false);const[err,setErr]=useState('');
+  const [evFiles,setEvFiles]=useState({});  // {evId: [File,...]}
+  const addEvFiles=(id,files)=>setEvFiles(p=>({...p,[id]:[...(p[id]||[]),...files]}));
+  const removeEvFile=(id,idx)=>setEvFiles(p=>({...p,[id]:(p[id]||[]).filter((_,i)=>i!==idx)}));
+  const clearEvFiles=(id)=>setEvFiles(p=>{const n={...p};delete n[id];return n;});
+  const set=(k,v)=>setForm(p=>({...p,[k]:v}));const toggle=(id)=>setEvs(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
+  const ci=cat?CATS[cat]:null;
+  const enough=cat==='cat1'?evs.some(e=>['visita','email','projetista'].includes(e)):(evs.includes('proposta')&&evs.some(e=>['visita','email','projetista'].includes(e)));
+  const formOk=form.title&&form.clientName&&form.clientCnpj&&form.address&&form.buildingType&&form.stage&&form.distributor&&form.contactName&&form.contactEmail&&form.contactPhone&&form.contactRole;
+  const save=async()=>{const semArq=evs.filter(id=>!(evFiles[id]&&evFiles[id].length));if(semArq.length){setErr('Anexe ao menos um PDF para cada evidência marcada antes de registrar.');return;}setBusy(true);setErr('');try{const sysArr=Object.entries(systems).map(([s,itens])=>({sistema:s,itens}));const proj=await D.createProject({...form,category:cat,systems:sysArr},evs,linkId,userId);for(const id of evs){for(const f of (evFiles[id]||[])){try{await D.uploadAttachment(proj.id,f);}catch(upErr){console.error('anexo',upErr);}}}onCreated();}catch(e){setErr(e.message);setBusy(false);}};
+  if(activeCount>=MAX_ACTIVE) return <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}><div className="modal" style={{maxWidth:440}}>
+    <div style={{padding:28,textAlign:'center'}}><div style={{fontSize:40,marginBottom:12}}>⛔</div>
+      <div style={{fontWeight:800,fontSize:16,color:'#DC2626',marginBottom:8}}>Limite atingido</div>
+      <p style={{fontSize:13,color:'var(--muted)',marginBottom:20}}>Você atingiu {MAX_ACTIVE} registros ativos neste canal.</p>
+      <button className="btn btn-primary" onClick={onClose}>Entendi</button></div></div></div>;
+  return <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}><div className="modal">
+    <div style={{padding:'16px 22px',borderBottom:'1px solid var(--border)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+      <div><div style={{fontWeight:800,fontSize:16,color:'var(--navy)'}}>Novo Registro</div>
+        <div style={{display:'flex',gap:6,marginTop:3}}>{['Categoria','Dados','Evidências'].map((s,i)=>
+          <span key={s} style={{fontSize:10,fontWeight:i===step?700:400,color:i===step?'var(--navy)':i<step?'#10B981':'var(--muted)'}}>{i<step?'✓ ':''}{s}{i<2?' →':''}</span>)}</div></div>
+      <button onClick={onClose} style={{background:'none',border:'none',fontSize:18,color:'var(--muted)'}}>✕</button>
+    </div>
+    <div style={{padding:22}}>
+      {step===0&&<><p style={{fontSize:12,color:'var(--slate)',marginBottom:14}}>Escolha a categoria (seu desconto: {tier}).</p>
+        {Object.entries(CATS).map(([k,c])=><button key={k} onClick={()=>setCat(k)} style={{display:'block',width:'100%',textAlign:'left',padding:13,borderRadius:10,border:`2px solid ${cat===k?c.color:'var(--border)'}`,background:cat===k?c.bg:'#fff',marginBottom:9}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            <div style={{display:'flex',alignItems:'center',gap:8}}><span style={{fontSize:18}}>{c.icon}</span>
+              <div><div style={{fontWeight:800,fontSize:13,color:c.color}}>{c.label}</div><div style={{fontSize:10,color:'var(--muted)'}}>{c.cycle} · validade {c.validityDays}d</div></div></div>
+            <div style={{textAlign:'right'}}><div style={{fontSize:9,color:'var(--muted)'}}>Seu desconto</div><div style={{fontSize:15,fontWeight:900,color:c.color}}>{c.discounts[tier]}</div></div>
+          </div></button>)}
+        <div style={{display:'flex',justifyContent:'space-between',gap:10,marginTop:16}}>
+          <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>
+          <button className="btn btn-primary" disabled={!cat} onClick={()=>setStep(1)}>Continuar →</button></div></>}
+      {step===1&&ci&&<><div style={{background:ci.bg,border:`1px solid ${ci.color}40`,borderRadius:8,padding:'9px 13px',marginBottom:16,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+          <div style={{fontWeight:700,fontSize:12,color:ci.color}}>{ci.icon} {ci.label}</div>
+          <div style={{fontSize:11,color:'var(--slate)'}}>Desconto: <strong style={{color:ci.color}}>{ci.discounts[tier]}</strong></div></div>
+        <Field label="Nome do Projeto" req><input className="input" value={form.title} onChange={e=>set('title',e.target.value)}/></Field>
+        <Field label="Razão Social do Cliente" req><input className="input" value={form.clientName} onChange={e=>set('clientName',e.target.value)}/></Field>
+        <Field label="CNPJ do Cliente" req><input className="input" value={form.clientCnpj} onChange={e=>set('clientCnpj',e.target.value)}/></Field>
+        <Field label="Endereço da Instalação" req><input className="input" value={form.address} onChange={e=>set('address',e.target.value)}/></Field>
+        <div className="grid grid-2">
+          <Field label="Edificação" req><select className="input" value={form.buildingType} onChange={e=>set('buildingType',e.target.value)}><option value="">Selecione…</option>{BUILDING_TYPES.map(b=><option key={b}>{b}</option>)}</select></Field>
+          <Field label="Estágio" req><select className="input" value={form.stage} onChange={e=>set('stage',e.target.value)}><option value="">Selecione…</option>{ci.stages.map(s=><option key={s}>{s}</option>)}</select></Field></div>
+        <Field label="Distribuidor Indicado" req><input className="input" value={form.distributor} onChange={e=>set('distributor',e.target.value)}/></Field>
+        <div style={{marginTop:4,marginBottom:4}}><label className="label" style={{fontWeight:700}}>Contato do cliente</label></div>
+        <div className="grid grid-2">
+          <Field label="Nome do contato" req><input className="input" value={form.contactName} onChange={e=>set('contactName',e.target.value)}/></Field>
+          <Field label="Função do contato" req><input className="input" value={form.contactRole} onChange={e=>set('contactRole',e.target.value)} placeholder="Ex.: Engenheiro, Comprador"/></Field></div>
+        <div className="grid grid-2">
+          <Field label="E-mail do contato" req><input className="input" type="email" value={form.contactEmail} onChange={e=>set('contactEmail',e.target.value)}/></Field>
+          <Field label="Telefone do contato" req><input className="input" type="tel" value={form.contactPhone} onChange={e=>set('contactPhone',e.target.value)}/></Field></div>
+        <Field label="Observações"><textarea className="input" rows={2} value={form.notes} onChange={e=>set('notes',e.target.value)}/></Field>
+        <div style={{marginTop:6,marginBottom:4}}><label className="label">Sistemas do projeto (selecione e informe as quantidades)</label></div>
+        {Object.entries(SISTEMAS).map(([sk,sd])=>{const on=!!systems[sk];return <div key={sk} style={{border:`2px solid ${on?'var(--navy)':'var(--border)'}`,borderRadius:10,padding:10,marginBottom:8,background:on?'#EAF2FB':'#fff'}}>
+          <button type="button" onClick={()=>toggleSys(sk)} style={{display:'flex',alignItems:'center',gap:8,width:'100%',background:'none',border:'none',textAlign:'left'}}>
+            <div style={{width:18,height:18,borderRadius:4,border:`2px solid ${on?'var(--navy)':'#CBD5E1'}`,background:on?'var(--navy)':'#fff',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{on&&<span style={{color:'#fff',fontSize:11}}>✓</span>}</div>
+            <span style={{fontSize:13,fontWeight:700,color:'#1E293B'}}>{sd.icon} {sd.label}</span></button>
+          {on&&<><div style={{marginTop:10}}><label style={{fontSize:10,color:'var(--muted)',fontWeight:600,display:'block',marginBottom:3}}>Marca</label>
+            <select className="input" value={systems[sk]._marca||''} onChange={e=>setSysItem(sk,'_marca',e.target.value)}>
+              <option value="">Selecione a marca…</option>{((fabMarcas&&fabMarcas[sk]&&fabMarcas[sk].length)?fabMarcas[sk]:(sd.marcas||['Outro'])).map(m=><option key={m} value={m}>{m}</option>)}</select>
+              {fabMarcas&&(!fabMarcas[sk]||!fabMarcas[sk].length)&&<div style={{fontSize:10,color:'var(--muted)',marginTop:3}}>Este fabricante ainda não definiu marcas para este sistema.</div>}</div>
+          <div className="grid grid-3" style={{marginTop:10}}>{sd.itens.map(it=><div key={it.key}><label style={{fontSize:10,color:'var(--muted)',fontWeight:600,display:'block',marginBottom:3}}>{it.label}</label>
+            <input className="input" type="number" min="0" value={systems[sk][it.key]||''} onChange={e=>setSysItem(sk,it.key,e.target.value)} placeholder="0"/></div>)}</div></>}
+        </div>;})}
+        <div style={{display:'flex',justifyContent:'space-between',gap:10,marginTop:16}}>
+          <button className="btn btn-ghost" onClick={()=>setStep(0)}>← Voltar</button>
+          <button className="btn btn-primary" disabled={!formOk} onClick={()=>setStep(2)}>Continuar →</button></div></>}
+      {step===2&&ci&&<><div style={{background:'#FEF3C7',border:'1px solid #D97706',borderRadius:8,padding:'9px 13px',marginBottom:14,fontSize:11,color:'#92400E'}}>
+          {cat==='cat1'?'CAT 1: ao menos 1 das 3 primeiras evidências.':'CAT 2/3: Proposta obrigatória + 1 das demais.'}</div>
+        <div style={{fontSize:11,color:'var(--muted)',marginBottom:10}}>Para cada evidência marcada, anexe um ou mais PDFs (pelo menos um, obrigatório).</div>
+        {EVIDENCE_TYPES.map(ev=>{const ok=ev.cats.includes(cat);const chk=evs.includes(ev.id);
+          return <div key={ev.id} style={{borderRadius:9,border:`2px solid ${chk?'var(--navy)':'var(--border)'}`,background:chk?'#EAF2FB':'#fff',opacity:ok?1:.4,marginBottom:8,padding:'10px 13px'}}>
+            <button type="button" onClick={()=>{if(ok){toggle(ev.id);if(chk)clearEvFiles(ev.id);}}} disabled={!ok} style={{display:'flex',alignItems:'center',gap:9,width:'100%',textAlign:'left',background:'none',border:'none'}}>
+              <div style={{width:18,height:18,borderRadius:4,border:`2px solid ${chk?'var(--navy)':'#CBD5E1'}`,background:chk?'var(--navy)':'#fff',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{chk&&<span style={{color:'#fff',fontSize:11}}>✓</span>}</div>
+              <div style={{fontSize:12,fontWeight:700,color:'#1E293B'}}>{ev.label}{ev.mandatoryFor?.includes(cat)&&<span style={{color:'#DC2626',marginLeft:4}}>*</span>}</div></button>
+            {chk&&<div style={{marginTop:10,paddingLeft:27}}>
+              {(evFiles[ev.id]||[]).map((f,idx)=><div key={idx} style={{display:'flex',alignItems:'center',gap:8,fontSize:12,color:'var(--slate)',marginBottom:5}}>📄 {f.name} <button type="button" onClick={()=>removeEvFile(ev.id,idx)} style={{background:'none',border:'none',color:'#DC2626',cursor:'pointer'}}>remover</button></div>)}
+              <label className="btn btn-ghost" style={{fontSize:12,display:'inline-block',cursor:'pointer'}}>+ Anexar PDF
+                <input type="file" accept="application/pdf" multiple style={{display:'none'}} onChange={e=>{const fs=Array.from(e.target.files||[]);const ok2=fs.filter(f=>{if(f.type!=='application/pdf'){alert('Apenas PDF: '+f.name);return false;}if(f.size>26214400){alert('Máximo 25 MB: '+f.name);return false;}return true;});if(ok2.length)addEvFiles(ev.id,ok2);e.target.value='';}}/></label>
+            </div>}
+          </div>;})}
+        {err&&<div style={{background:'#FEE2E2',borderRadius:8,padding:'8px 12px',fontSize:12,color:'#7F1D1D',marginTop:8}}>{err}</div>}
+        <div style={{display:'flex',justifyContent:'space-between',gap:10,marginTop:16}}>
+          <button className="btn btn-ghost" onClick={()=>setStep(1)}>← Voltar</button>
+          <button className="btn btn-primary" disabled={!enough||busy} onClick={save}>{busy?'Salvando…':'Registrar'}</button></div></>}
+    </div></div></div>;
+}
+
+function ProjectDetailModal({project:init,onClose,onChanged,isFabricante,currentUserId}){
+  const [project,setProject]=useState(init);const[note,setNote]=useState('');
+  const[busy,setBusy]=useState(false);const[noteType,setNoteType]=useState('');const[atts,setAtts]=useState([]);const[upBusy,setUpBusy]=useState(false);
+  const [descSys,setDescSys]=useState(init.descontos_sistema||{});const[editDesc,setEditDesc]=useState(false);
+  const setDS=(k,v)=>setDescSys(p=>({...p,[k]:v}));
+  const c=CATS[project.category];const days=daysLeft(project.expires_at);
+  const reload=async()=>{const f=await D.fetchProjectById(project.id);setProject(f);onChanged?.();};
+  const loadAtts=async()=>{try{setAtts(await D.listAttachments(project.id));}catch(e){console.error(e);}};
+  useEffect(()=>{loadAtts();},[]);
+  const onUpload=async(e)=>{const file=e.target.files?.[0];if(!file)return;setUpBusy(true);try{await D.uploadAttachment(project.id,file);await loadAtts();}catch(err){alert('Erro: '+err.message);}finally{setUpBusy(false);e.target.value='';}};
+  const openAtt=async(name)=>{try{const u=await D.signedUrl(project.id+'/'+name);window.open(u,'_blank');}catch(err){alert('Erro: '+err.message);}};
+  const delAtt=async(name)=>{if(!confirm('Remover este anexo?'))return;try{await D.deleteAttachment(project.id,name);await loadAtts();}catch(err){alert('Erro: '+err.message);}};
+  const submitNote=async()=>{if(!note.trim())return;setBusy(true);try{const txt=(noteType?'['+noteType+'] ':'')+note.trim();await D.addUpdate(project.id,txt);setNote('');setNoteType('');await reload();}catch(e){alert('Erro ao salvar: '+e.message);}finally{setBusy(false);}};
+  const doApprove=async()=>{const algum=Object.values(descSys).some(v=>v&&String(v).trim());if(!algum){alert('Informe ao menos um desconto por sistema.');return;}setBusy(true);try{await D.approveProject(project.id,descSys,project);await reload();}catch(e){alert('Erro ao aprovar: '+e.message);}finally{setBusy(false);}};
+  const saveDescEdit=async()=>{setBusy(true);try{const antes=project.descontos_sistema||{};const mudancas=[];Object.keys(SISTEMAS).forEach(k=>{const a=antes[k]||'—';const d=descSys[k]||'—';if(a!==d&&(antes[k]||descSys[k]))mudancas.push((SISTEMAS[k]?SISTEMAS[k].label:k)+': '+a+' → '+d);});await D.updateProject(project.id,{descontos_sistema:descSys});await D.audit('projeto.editar_desconto','projeto',project.id,'Alterou descontos de "'+(project.title||'')+'"'+(mudancas.length?' — '+mudancas.join('; '):''));setEditDesc(false);await reload();}catch(e){alert('Erro: '+e.message);}finally{setBusy(false);}};
+  const [rejReason,setRejReason]=useState('');const[showRej,setShowRej]=useState(false);
+  const doReject=async()=>{if(!rejReason.trim()){alert('Informe o motivo da reprovação.');return;}setBusy(true);try{await D.rejectProject(project.id,rejReason.trim(),project.title,project);setShowRej(false);await reload();}catch(e){alert('Erro: '+e.message);}finally{setBusy(false);}};
+  const mark=async(status)=>{setBusy(true);try{const f={status};if(['convertido','encerrado'].includes(status))f.closed_at=new Date().toISOString();await D.updateProject(project.id,f);await reload();}catch(e){alert('Erro: '+e.message);}finally{setBusy(false);}};
+  const evids=EVIDENCE_TYPES.filter(e=>(project.evidences||[]).some(pe=>pe.type===e.id));
+  const updates=(project.project_updates||[]).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+  return <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}><div className="modal" style={{maxWidth:680}}>
+    <div style={{padding:'16px 22px',borderBottom:'1px solid var(--border)'}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+        <div><div style={{display:'flex',gap:6,marginBottom:4,flexWrap:'wrap'}}><CatBadge cat={project.category}/><StatusBadge status={project.status}/></div>
+          <div style={{fontWeight:800,fontSize:17,color:'#1E293B'}}>{project.title}</div>
+          <div style={{fontSize:11,color:'var(--muted)'}}>Registrado {new Date(project.registered_at).toLocaleDateString('pt-BR')}</div></div>
+        <button onClick={onClose} style={{background:'none',border:'none',fontSize:18,color:'var(--muted)'}}>✕</button></div>
+    </div>
+    <div style={{padding:20,display:'flex',flexDirection:'column',gap:14}}>
+      {isFabricante&&project.status==='pendente'&&<div style={{background:'#EAF2FB',border:'1px solid var(--blue)',borderRadius:10,padding:14}}>
+        <div style={{fontWeight:700,fontSize:13,color:'var(--navy)',marginBottom:8}}>Analisar Registro</div>
+        <label className="label">Desconto por sistema</label>
+        {(project.systems||[]).length>0?<div className="grid grid-2" style={{gap:8,marginBottom:10}}>{(project.systems||[]).map(s=>{const sd=SISTEMAS[s.sistema];if(!sd)return null;return <div key={s.sistema}>
+            <label style={{fontSize:11,color:'var(--muted)',fontWeight:600,display:'block',marginBottom:3}}>{sd.icon} {sd.label}{s.itens?._marca?(' · '+s.itens._marca):''}</label>
+            <input className="input" style={{fontSize:12}} placeholder="Ex.: 10%" value={descSys[s.sistema]||''} onChange={e=>setDS(s.sistema,e.target.value)}/></div>;})}</div>
+          :<div style={{fontSize:12,color:'var(--muted)',marginBottom:10}}>Este projeto não tem sistemas cadastrados.</div>}
+        <div style={{display:'flex',gap:8}}>
+          <button className="btn btn-success" disabled={busy} onClick={doApprove}>Aprovar</button>
+          <button className="btn btn-danger" disabled={busy} onClick={()=>setShowRej(s=>!s)}>Reprovar</button></div>
+        {showRej&&<div style={{marginTop:10,background:'#fff',borderRadius:8,padding:12,border:'1px solid var(--border)'}}>
+          <label className="label">Motivo da reprovação (obrigatório)</label>
+          <textarea className="input" rows={2} value={rejReason} onChange={e=>setRejReason(e.target.value)} placeholder="Explique o motivo para o integrador…" style={{resize:'none',marginBottom:8}}/>
+          <button className="btn btn-danger" style={{fontSize:12}} disabled={busy||!rejReason.trim()} onClick={doReject}>Confirmar reprovação</button></div>}</div>}
+      {project.status==='reprovado'&&project.reject_reason&&<div style={{background:'#FEE2E2',border:'1px solid #FCA5A5',borderRadius:10,padding:13}}><div style={{fontWeight:700,fontSize:12,color:'#991B1B',marginBottom:3}}>❌ Motivo da reprovação</div><div style={{fontSize:12,color:'#7F1D1D'}}>{project.reject_reason}</div></div>}
+      {project.status==='aprovado'&&c&&<div style={{background:c.bg,border:`1.5px solid ${c.color}40`,borderRadius:10,padding:13}}>
+        <div style={{fontWeight:700,fontSize:12,color:c.color,marginBottom:8}}>💰 Descontos Autorizados <span style={{fontWeight:400,color:'var(--muted)'}}>· válidos só para este projeto</span></div>
+        {(project.descontos_sistema&&Object.values(project.descontos_sistema).some(v=>v))?
+          <div style={{display:'flex',flexWrap:'wrap',gap:8}}>{Object.entries(project.descontos_sistema).filter(([k,v])=>v).map(([k,v])=>{const sd=SISTEMAS[k];return <span key={k} style={{fontSize:13,background:'#fff',border:`1.5px solid ${c.color}`,borderRadius:8,padding:'6px 12px',color:c.color,fontWeight:700}}>{sd?sd.icon+' '+sd.label:k}: {v}</span>;})}</div>
+          :<div style={{fontSize:12,color:'var(--muted)'}}>Sem desconto por sistema definido.</div>}
+        {isFabricante&&<div style={{marginTop:10}}>
+          {!editDesc?<button className="btn btn-ghost" style={{fontSize:12}} onClick={()=>{setEditDesc(true);setDescSys(project.descontos_sistema||{});}}>✏️ Editar descontos</button>
+          :<div style={{background:'#fff',borderRadius:8,padding:12,border:'1px solid var(--border)'}}>
+            <label className="label">Desconto por sistema</label>
+            {(project.systems||[]).length>0&&<div className="grid grid-2" style={{gap:8,marginBottom:10}}>{(project.systems||[]).map(s=>{const sd=SISTEMAS[s.sistema];if(!sd)return null;return <div key={s.sistema}>
+                <label style={{fontSize:11,color:'var(--muted)',fontWeight:600,display:'block',marginBottom:3}}>{sd.icon} {sd.label}</label>
+                <input className="input" style={{fontSize:12}} placeholder="Ex.: 10%" value={descSys[s.sistema]||''} onChange={e=>setDS(s.sistema,e.target.value)}/></div>;})}</div>}
+            <div style={{display:'flex',gap:8}}><button className="btn btn-primary" style={{fontSize:12}} disabled={busy} onClick={saveDescEdit}>Salvar</button>
+              <button className="btn btn-ghost" style={{fontSize:12}} onClick={()=>setEditDesc(false)}>Cancelar</button></div>
+          </div>}</div>}</div>}
+      <div className="grid grid-2">
+        {[['Cliente',project.client_name],['CNPJ',project.client_cnpj],['Edificação',project.building_type],['Estágio',project.stage],['Distribuidor',project.distributor||'—'],['Endereço',project.address],['Contato',project.contact_name||'—'],['Função',project.contact_role||'—'],['E-mail',project.contact_email||'—'],['Telefone',project.contact_phone||'—']].map(([l,v])=>
+          <div key={l} style={{background:'#F8FAFC',borderRadius:7,padding:'9px 11px'}}><div style={{fontSize:10,color:'var(--muted)',fontWeight:600}}>{l}</div><div style={{fontSize:12,color:'#1E293B',fontWeight:500}}>{v}</div></div>)}
+      </div>
+      {evids.length>0&&<div><div style={{fontWeight:700,fontSize:12,color:'#1E293B',marginBottom:5}}>Evidências</div>
+        <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>{evids.map(e=><span key={e.id} style={{fontSize:11,fontWeight:600,color:'#0D9488',background:'#E8F8F5',padding:'3px 9px',borderRadius:99}}>✓ {e.label}</span>)}</div></div>}
+      {(project.systems||[]).length>0&&<div><div style={{fontWeight:700,fontSize:12,color:'#1E293B',marginBottom:5}}>Sistemas</div>
+        <div style={{display:'flex',flexDirection:'column',gap:6}}>{project.systems.map((s,idx)=>{const sd=SISTEMAS[s.sistema];if(!sd)return null;
+          const marca=s.itens?._marca;
+          const itens=Object.entries(s.itens||{}).filter(([k,v])=>k!=='_marca'&&v&&Number(v)>0);
+          return <div key={idx} style={{background:'#F8FAFC',borderRadius:7,padding:'8px 11px'}}>
+            <div style={{fontSize:12,fontWeight:700,color:'#1E293B'}}>{sd.icon} {sd.label}{marca?<span style={{fontWeight:400,color:'var(--muted)'}}> · {marca}</span>:''}</div>
+            <div style={{fontSize:11,color:'var(--slate)',marginTop:2}}>{itens.length?itens.map(([k,v])=>{const il=sd.itens.find(x=>x.key===k);return `${il?il.label:k}: ${v}`;}).join(' · '):'sem quantidades'}</div>
+          </div>;})}</div></div>}
+      {project.notes&&<div style={{background:'#F8FAFC',borderRadius:7,padding:'9px 11px',fontSize:12,color:'var(--slate)'}}>{project.notes}</div>}
+      {!isFabricante&&project.status==='aprovado'&&<div style={{display:'flex',gap:8}}>
+        <button className="btn btn-success" style={{flex:1,fontSize:12}} disabled={busy} onClick={()=>mark('convertido')}>✅ Convertido</button>
+        <button className="btn btn-ghost" style={{flex:1,fontSize:12}} disabled={busy} onClick={()=>mark('encerrado')}>Encerrar</button></div>}
+      <div><div style={{fontWeight:700,fontSize:12,color:'#1E293B',marginBottom:6}}>Anexos (PDF, até 25 MB)</div>
+        {atts.length>0&&<div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:8}}>{atts.map(a=><div key={a.name} style={{display:'flex',justifyContent:'space-between',alignItems:'center',background:'#F8FAFC',borderRadius:7,padding:'7px 11px'}}>
+          <button type="button" onClick={()=>openAtt(a.name)} style={{background:'none',border:'none',color:'var(--blue)',fontSize:12,fontWeight:600,textAlign:'left',flex:1,cursor:'pointer'}}>📄 {a.name.replace(/^\d+_/,'')}</button>
+          {!isFabricante&&<button type="button" onClick={()=>delAtt(a.name)} style={{background:'none',border:'none',color:'var(--red)',fontSize:11,cursor:'pointer'}}>remover</button>}
+        </div>)}</div>}
+        {!isFabricante&&<label className="btn btn-ghost" style={{fontSize:12,display:'inline-block',cursor:'pointer'}}>{upBusy?'Enviando…':'+ Anexar PDF'}
+          <input type="file" accept="application/pdf" style={{display:'none'}} disabled={upBusy} onChange={onUpload}/></label>}
+        {atts.length===0&&isFabricante&&<div style={{fontSize:11,color:'var(--muted)'}}>Nenhum anexo.</div>}
+      </div>
+      {!isFabricante&&<div><div style={{fontWeight:700,fontSize:12,color:'#1E293B',marginBottom:6}}>Adicionar Atualização</div>
+        <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:8}}>{TIPOS_ATUALIZACAO.map(t=><button key={t} type="button" onClick={()=>setNoteType(noteType===t?'':t)} style={{padding:'4px 10px',borderRadius:99,border:'1.5px solid',borderColor:noteType===t?'var(--navy)':'var(--border)',background:noteType===t?'#EAF2FB':'#fff',color:noteType===t?'var(--navy)':'var(--muted)',fontSize:11,fontWeight:600}}>{t}</button>)}</div>
+        <div style={{display:'flex',gap:8}}><textarea className="input" rows={2} value={note} onChange={e=>setNote(e.target.value)} style={{resize:'none'}} placeholder={noteType?('Detalhe sobre: '+noteType):'Descreva a atualização…'}/>
+          <button className="btn btn-primary" style={{alignSelf:'flex-end',fontSize:12}} disabled={!note.trim()||busy} onClick={submitNote}>Salvar</button></div></div>}
+      {updates.length>0&&<div><div style={{fontWeight:700,fontSize:12,color:'#1E293B',marginBottom:6}}>Histórico</div>
+        {updates.map(u=><div key={u.id} style={{borderLeft:'3px solid var(--blue)',paddingLeft:10,marginBottom:7}}>
+          <div style={{fontSize:10,color:'var(--muted)'}}>{new Date(u.created_at).toLocaleString('pt-BR')}</div>
+          <div style={{fontSize:12,color:'var(--slate)'}}>{u.text}</div></div>)}</div>}
+    </div></div></div>;
+}
+
+// ============================ ROW / EMPTY HELPERS ===========================
+const Empty=({text})=><div style={{textAlign:'center',padding:'40px 0',color:'var(--muted)'}}><div style={{fontSize:32,marginBottom:8}}>📁</div><div style={{fontWeight:600,fontSize:13}}>{text}</div></div>;
+function ProjectRow({p,onSelect,showInt}){const c=CATS[p.category];const days=daysLeft(p.expires_at);const intName=p.channel_links?.integrador?.name;
+  return <div onClick={()=>onSelect(p)} className="card" style={{padding:'11px 14px',cursor:'pointer',marginBottom:8,borderLeft:`4px solid ${c?.color||'#ccc'}`}}>
+    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:10}}>
+      <div><div style={{display:'flex',gap:5,marginBottom:3,flexWrap:'wrap'}}><CatBadge cat={p.category}/><StatusBadge status={p.status}/>
+        {p.status==='aprovado'&&p.descontos_sistema&&Object.values(p.descontos_sistema).some(v=>v)&&<span style={{fontSize:10,fontWeight:800,color:'#059669',background:'#D1FAE5',padding:'2px 7px',borderRadius:99}}>💰 {Object.entries(p.descontos_sistema).filter(([k,v])=>v).map(([k,v])=>v).join(' / ')}</span>}</div>
+        <div style={{fontWeight:700,fontSize:13,color:'#1E293B'}}>{p.title}</div>
+        <div style={{fontSize:11,color:'var(--muted)'}}>{p.client_name} · {p.stage}{showInt&&intName?` · ${intName}`:''}</div></div>
+      <div style={{textAlign:'right',flexShrink:0}}><div style={{fontSize:10,color:'var(--muted)'}}>Expira</div>
+        <div style={{fontSize:12,fontWeight:700,color:days<=15?'#DC2626':'var(--slate)'}}>{days>0?`${days}d`:'Expirado'}</div></div>
+    </div></div>;}
+const Filter=({active,onClick,children})=><button onClick={onClick} style={{padding:'4px 10px',borderRadius:6,border:'1.5px solid',borderColor:active?'var(--navy)':'var(--border)',background:active?'#EAF2FB':'#fff',color:active?'var(--navy)':'var(--muted)',fontSize:11,fontWeight:600}}>{children}</button>;
+
+// ============================ INTEGRADOR DASHBOARD =========================
+function IntegradorDashboard(){
+  const {org,membership,isAdmin}=useAuth();
+  const [tab,setTab]=useState('canais');const[links,setLinks]=useState([]);const[activeLink,setActiveLink]=useState(null);
+  const [projects,setProjects]=useState([]);const[loading,setLoading]=useState(true);const[showNew,setShowNew]=useState(false);const[selected,setSelected]=useState(null);
+  const loadLinks=useCallback(async()=>{try{const d=await D.fetchMyFabricantes(org.id);setLinks(d);setActiveLink(cur=>cur||d.find(l=>l.status==='aprovado')||null);}catch(e){console.error(e);}},[org.id]);
+  const loadProjects=useCallback(async()=>{if(!activeLink){setProjects([]);return;}try{setProjects(await D.fetchProjects(activeLink.id));}catch(e){console.error(e);}},[activeLink]);
+  const [allProj,setAllProj]=useState([]);
+  useEffect(()=>{if(tab==='relatorios'){(async()=>{try{setAllProj(await D.fetchMyProjectsAll(org.id));}catch(e){console.error(e);}})();}},[tab,org.id]);
+  useEffect(()=>{(async()=>{await loadLinks();setLoading(false);})();return D.subLinks(loadLinks);},[loadLinks]);
+  useEffect(()=>{loadProjects();return D.subProjects(loadProjects);},[loadProjects]);
+  const activeProjects=projects.filter(p=>!['encerrado','expirado','reprovado'].includes(p.status));
+  const stats={total:projects.length,aprovados:projects.filter(p=>p.status==='aprovado').length,pendentes:projects.filter(p=>p.status==='pendente').length,expirando:projects.filter(p=>p.status==='aprovado'&&daysLeft(p.expires_at)<=15).length};
+  const converted=projects.filter(p=>p.status==='convertido').length;
+  const closed=projects.filter(p=>['convertido','encerrado','reprovado','expirado'].includes(p.status)).length;
+  const score=useMemo(()=>calcScore({converted,closed}),[converted,closed]);
+  const atLimit=activeProjects.length>=MAX_ACTIVE;const tier=activeLink?.tier||'silver';
+  const tabs=[['canais','🤝 Fabricantes'],['dashboard','📊 Dashboard'],['projetos','📁 Projetos'],['beneficios','🎁 Benefícios'],['relatorios','📑 Relatórios']];
+  if(isAdmin){tabs.push(['usuarios','👤 Usuários']);tabs.push(['historico','🕓 Histórico']);}
+  const ScoreGauge=({score})=>{const col=score>=50?'#10B981':score>=20?'#D97706':'#DC2626';
+    return <div style={{display:'flex',alignItems:'center',gap:10}}><div style={{width:52,height:52,borderRadius:'50%',border:`4px solid ${col}`,display:'flex',alignItems:'center',justifyContent:'center'}}><span style={{fontSize:14,fontWeight:900,color:col}}>{score}%</span></div>
+      <div><div style={{fontSize:12,fontWeight:700,color:col}}>Score {score>=50?'Alto':score>=20?'Médio':'Baixo'}</div><div style={{fontSize:10,color:'var(--muted)'}}>neste canal</div></div></div>;};
+  return <div style={{minHeight:'100vh'}}><Header tabs={tabs} active={tab} onTab={setTab}/>
+    <main className="container" style={{padding:'18px 16px 40px'}}>
+      {tab!=='canais'&&tab!=='usuarios'&&links.filter(l=>l.status==='aprovado').length>0&&
+        <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:16,flexWrap:'wrap'}}>
+          <span style={{fontSize:12,color:'var(--muted)',fontWeight:600}}>Fabricante:</span>
+          {links.filter(l=>l.status==='aprovado').map(l=><button key={l.id} onClick={()=>setActiveLink(l)} style={{padding:'6px 12px',borderRadius:8,border:'1.5px solid',borderColor:activeLink?.id===l.id?'var(--navy)':'var(--border)',background:activeLink?.id===l.id?'#EAF2FB':'#fff',fontSize:12,fontWeight:700,color:activeLink?.id===l.id?'var(--navy)':'var(--slate)'}}>🏭 {l.fabricante?.name} <span style={{fontWeight:400,color:'var(--muted)'}}>· {l.tier}</span></button>)}
+        </div>}
+      {loading?<div className="spinner"/>:<>
+        {tab==='canais'&&<CanaisTab org={org} links={links} onChanged={loadLinks} onGo={(l)=>{setActiveLink(l);setTab('projetos');}}/>}
+        {tab==='usuarios'&&<MembersPanel orgId={org.id} myId={membership.id} isAdmin={isAdmin}/>}
+        {tab==='historico'&&isAdmin&&<AuditPanel orgId={org.id}/>}
+        {tab==='relatorios'&&<ReportsPanel projects={allProj} ints={[]} isFabricante={false} orgName={org.name}/>}
+        {!activeLink&&['dashboard','projetos','descontos'].includes(tab)&&<Empty text="Selecione ou solicite vínculo a um fabricante na aba Fabricantes."/>}
+        {activeLink&&tab==='dashboard'&&<>
+          <div className="grid grid-2" style={{marginBottom:14}}>
+            <div className="card" style={{padding:16}}><div style={{fontWeight:700,fontSize:12,color:'#1E293B',marginBottom:10}}>Score de Conversão</div><ScoreGauge score={score}/></div>
+            <div className="card" style={{padding:16}}><div style={{fontWeight:700,fontSize:12,color:'#1E293B',marginBottom:10}}>Seu nível neste canal</div><TierBadge tier={tier}/></div></div>
+          <div className="grid grid-4" style={{marginBottom:14}}>
+            {[['Total','📁',stats.total,'#1A3C6E'],['Aprovados','✅',stats.aprovados,'#10B981'],['Pendentes','⏳',stats.pendentes,'#D97706'],['Expirando','🔔',stats.expirando,'#8B5CF6']].map(([l,ic,v,co])=>
+              <div key={l} className="card" style={{padding:'11px 13px'}}><div style={{fontSize:22,fontWeight:800,color:co}}>{v}</div><div style={{fontSize:10,color:'var(--muted)',marginTop:1}}>{ic} {l}</div></div>)}</div>
+          {(()=>{const ins=[];
+            const vencendo=projects.filter(p=>p.status==='aprovado'&&daysLeft(p.expires_at)<=15&&daysLeft(p.expires_at)>=0);
+            const vencidos=projects.filter(p=>p.status==='aprovado'&&daysLeft(p.expires_at)<0);
+            const pend=projects.filter(p=>p.status==='pendente');
+            const semAtualiz=projects.filter(p=>p.status==='aprovado'&&(!p.project_updates||p.project_updates.length===0));
+            if(vencendo.length)ins.push(['⏰','#D97706','Você tem '+vencendo.length+' projeto(s) a vencer nos próximos 15 dias. Atualize-os para não perder o registro.']);
+            if(vencidos.length)ins.push(['⚠️','#DC2626',vencidos.length+' projeto(s) com prazo vencido. Registre uma atualização ou renove o registro com o fabricante.']);
+            if(pend.length)ins.push(['⏳','#2E6CA8',pend.length+' registro(s) aguardando aprovação do fabricante.']);
+            if(semAtualiz.length)ins.push(['📝','#8B5CF6',semAtualiz.length+' projeto(s) aprovados sem nenhuma atualização. Adicione o andamento (reunião, visita, proposta).']);
+            if(activeProjects.length>=MAX_ACTIVE)ins.push(['🚦','#DC2626','Você atingiu o limite de '+MAX_ACTIVE+' projetos ativos neste canal. Encerre ou converta projetos para liberar espaço.']);
+            if(!ins.length)ins.push(['✅','#10B981','Tudo em dia! Nenhum alerta no momento.']);
+            return <div style={{marginBottom:16}}><div style={{fontWeight:700,fontSize:13,color:'#1E293B',marginBottom:8}}>💡 Insights</div>
+              <div style={{display:'flex',flexDirection:'column',gap:8}}>{ins.map(([ic,co,txt],i)=><div key={i} style={{display:'flex',gap:10,alignItems:'flex-start',background:'#F8FAFC',borderLeft:`4px solid ${co}`,borderRadius:7,padding:'10px 13px'}}>
+                <span style={{fontSize:16}}>{ic}</span><span style={{fontSize:12,color:'var(--slate)',lineHeight:1.4}}>{txt}</span></div>)}</div></div>;
+          })()}
+          <div style={{fontWeight:700,fontSize:13,color:'#1E293B',marginBottom:8}}>Projetos Recentes</div>
+          {projects.slice(0,5).map(p=><ProjectRow key={p.id} p={p} onSelect={setSelected}/>)}
+          {projects.length===0&&<Empty text="Nenhum projeto neste canal ainda."/>}</>}
+        {activeLink&&tab==='projetos'&&<>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14,flexWrap:'wrap',gap:8}}>
+            <div style={{fontSize:12,color:'var(--muted)'}}>{activeProjects.length}/{MAX_ACTIVE} ativos neste canal</div>
+            <button className="btn btn-primary" disabled={atLimit} onClick={()=>setShowNew(true)}>+ Novo Registro</button></div>
+          <ProjectsTab projects={projects} onSelect={setSelected}/></>}
+        {activeLink&&tab==='beneficios'&&<>
+          <div style={{fontSize:12,color:'var(--muted)',marginBottom:12}}>Seu nível neste canal: <TierBadge tier={tier}/>. Os benefícios aumentam conforme o nível.</div>
+          {activeLink.descontos&&Object.values(activeLink.descontos).some(v=>v)&&<div className="card" style={{overflow:'hidden',marginBottom:12}}>
+            <div style={{background:'var(--teal)',padding:'10px 16px',fontWeight:700,fontSize:13,color:'#fff'}}>💰 Descontos por sistema definidos pelo fabricante</div>
+            <div style={{padding:14}}>{Object.entries(SISTEMAS).filter(([sk])=>activeLink.descontos[sk]).map(([sk,sd])=><div key={sk} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 0',borderBottom:'1px solid #F1F5F9'}}>
+              <span style={{fontSize:12,color:'#1E293B',fontWeight:600}}>{sd.icon} {sd.label}</span><span style={{fontSize:16,fontWeight:800,color:'var(--teal)'}}>{activeLink.descontos[sk]}</span></div>)}</div>
+          </div>}
+          {['silver','gold','platinum'].map(tk=>{const t=TIERS[tk];const atual=tk===tier;return <div key={tk} className="card" style={{overflow:'hidden',marginBottom:12,border:atual?`2px solid ${t?.color||'var(--navy)'}`:'1px solid var(--border)'}}>
+            <div style={{background:t?.color||'var(--navy)',padding:'10px 16px',fontWeight:700,fontSize:13,color:'#fff',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <span>{t?.icon||'🏅'} {t?.label||tk}</span>{atual&&<span style={{fontSize:10,background:'rgba(255,255,255,.25)',padding:'2px 8px',borderRadius:99}}>seu nível</span>}</div>
+            <div style={{padding:14}}>{(BENEFICIOS[tk]||[]).map((b,i)=><div key={i} style={{display:'flex',gap:8,alignItems:'flex-start',padding:'5px 0',fontSize:12,color:'var(--slate)'}}><span style={{color:'#10B981'}}>✓</span><span>{b}</span></div>)}</div>
+          </div>;})}</>}
+      </>}
+    </main>
+    {showNew&&activeLink&&<NewProjectModal onClose={()=>setShowNew(false)} onCreated={()=>{setShowNew(false);loadProjects();}} tier={tier} linkId={activeLink.id} userId={membership.id} fabricanteId={activeLink.fabricante_id} activeCount={activeProjects.length}/>}
+    {selected&&<ProjectDetailModal project={selected} onClose={()=>setSelected(null)} onChanged={loadProjects} isFabricante={false} currentUserId={membership.id}/>}
+  </div>;
+}
+function SearchBox({value,onChange,placeholder}){
+  return <div style={{position:'relative',marginBottom:12}}>
+    <span style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',fontSize:14,color:'var(--muted)'}}>🔍</span>
+    <input className="input" style={{paddingLeft:34}} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder||'Buscar…'}/>
+    {value&&<button onClick={()=>onChange('')} style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',color:'var(--muted)',fontSize:16,cursor:'pointer'}}>×</button>}
+  </div>;
+}
+function ProjectsTab({projects,onSelect}){const[cat,setCat]=useState('todas');const[status,setStatus]=useState('todos');const[q,setQ]=useState('');
+  const term=q.trim().toLowerCase();
+  const f=projects.filter(p=>(cat==='todas'||p.category===cat)&&(status==='todos'||p.status===status)&&(!term||[p.title,p.client_name,p.client_cnpj,p.distributor,p.contact_name,p.address,p.channel_links?.integrador?.name].some(v=>String(v||'').toLowerCase().includes(term))));
+  return <><SearchBox value={q} onChange={setQ} placeholder="Buscar por projeto, cliente, CNPJ, distribuidor, contato…"/>
+    <div style={{display:'flex',gap:4,flexWrap:'wrap',marginBottom:14}}>
+    {[['todas','Todas'],['cat1','CAT 1'],['cat2','CAT 2'],['cat3','CAT 3']].map(([k,l])=><Filter key={k} active={cat===k} onClick={()=>setCat(k)}>{l}</Filter>)}
+    <span style={{color:'var(--border)'}}>|</span>
+    {[['todos','Todos'],['pendente','Pendente'],['aprovado','Aprovado'],['conflito','Conflito']].map(([k,l])=><Filter key={k} active={status===k} onClick={()=>setStatus(k)}>{l}</Filter>)}</div>
+    {f.map(p=><ProjectRow key={p.id} p={p} onSelect={onSelect}/>)}{f.length===0&&<Empty text="Nenhum projeto encontrado."/>}</>;}
+function CanaisTab({org,links,onChanged,onGo}){
+  const [fabs,setFabs]=useState([]);const[sel,setSel]=useState('');const[term,setTerm]=useState('');const[busy,setBusy]=useState(false);const[loading,setLoading]=useState(true);
+  const linkedIds=new Set(links.map(l=>l.fabricante_id));
+  useEffect(()=>{(async()=>{try{setFabs(await D.listAllFabricantes());}catch(e){console.error(e);}finally{setLoading(false);}})();},[]);
+  const askById=async(id)=>{if(!id)return;setBusy(true);try{await D.requestLink(id,org.id,org.name);await onChanged();setSel('');}catch(e){alert(e.message);}finally{setBusy(false);}};
+  const askByName=async()=>{const t=term.trim();if(!t)return;setBusy(true);try{const r=await D.searchFabricantes(t);if(!r||r.length===0){alert('Nenhum fabricante encontrado com "'+t+'". Confira o nome com o fabricante.');return;}
+    if(r.length===1){await D.requestLink(r[0].id,org.id,org.name);await onChanged();setTerm('');}
+    else{alert('Vários fabricantes correspondem a "'+t+'". Use a lista suspensa acima para escolher.');}}catch(e){alert(e.message);}finally{setBusy(false);}};
+  const disponiveis=fabs.filter(f=>!linkedIds.has(f.id));
+  return <><div className="card" style={{padding:16,marginBottom:16}}>
+    <div style={{fontWeight:700,fontSize:13,color:'#1E293B',marginBottom:8}}>Solicitar vínculo a um fabricante</div>
+    <div style={{fontSize:12,color:'var(--muted)',marginBottom:10}}>Você pode trabalhar com vários fabricantes. Escolha na lista ou digite o nome; o fabricante aprova.</div>
+    {loading?<div style={{fontSize:12,color:'var(--muted)'}}>Carregando fabricantes…</div>:<>
+      <label className="label">Buscar fabricante</label>
+      <div style={{marginBottom:10}}><input className="input" value={term} onChange={e=>setTerm(e.target.value)} placeholder="Digite para filtrar pelo nome…"/></div>
+      <div style={{display:'flex',flexDirection:'column',gap:6,maxHeight:320,overflowY:'auto'}}>
+        {disponiveis.filter(f=>!term.trim()||String(f.name||'').toLowerCase().includes(term.trim().toLowerCase())).map(f=>{const url=D.logoUrl(f.logo_path);return <div key={f.id} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 10px',border:'1px solid var(--border)',borderRadius:9}}>
+          {url?<img src={url} alt="" style={{width:34,height:34,borderRadius:7,objectFit:'cover',background:'#fff',border:'1px solid var(--border)'}}/>:<div style={{width:34,height:34,borderRadius:7,background:'#F1F5F9',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16}}>🏭</div>}
+          <div style={{flex:1}}><div style={{fontWeight:700,fontSize:13,color:'#1E293B'}}>{f.name}</div><div style={{fontSize:11,color:'var(--muted)'}}>{f.cnpj||''}</div></div>
+          <button className="btn btn-primary" style={{fontSize:12}} disabled={busy} onClick={()=>askById(f.id)}>Solicitar</button>
+        </div>;})}
+      </div>
+      {disponiveis.length===0&&<div style={{fontSize:12,color:'var(--muted)',marginTop:10}}>Você já está vinculado a todos os fabricantes cadastrados.</div>}
+    </>}
+  </div>
+  <div style={{fontWeight:700,fontSize:13,color:'#1E293B',marginBottom:8}}>Meus fabricantes</div>
+  {links.length===0&&<Empty text="Você ainda não está vinculado a nenhum fabricante."/>}
+  {links.map(l=><div key={l.id} className="card" style={{padding:14,marginBottom:8}}>
+    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8}}>
+      <div style={{display:'flex',alignItems:'center',gap:10}}>{(()=>{const u=D.logoUrl(l.fabricante?.logo_path);return u?<img src={u} alt="" style={{width:34,height:34,borderRadius:7,objectFit:'cover',background:'#fff',border:'1px solid var(--border)'}}/>:<span style={{fontSize:18}}>🏭</span>;})()}
+        <div><div style={{display:'flex',alignItems:'center',gap:8}}><span style={{fontWeight:700,fontSize:14}}>{l.fabricante?.name}</span><StatusBadge status={l.status}/>{l.status==='aprovado'&&<TierBadge tier={l.tier}/>}</div>
+        <div style={{fontSize:11,color:'var(--muted)'}}>{l.fabricante?.cnpj||''}</div></div></div>
+      {l.status==='aprovado'&&<button className="btn btn-ghost" style={{fontSize:12}} onClick={()=>onGo(l)}>Ver projetos →</button>}
+      {l.status==='pendente'&&<span style={{fontSize:12,color:'#D97706'}}>Aguardando aprovação</span>}</div></div>)}</>;}
+
+// ============================ FABRICANTE DASHBOARD =========================
+function ReportsPanel({projects,ints,isFabricante,orgName}){
+  const [opts,setOpts]=useState({status:true,categoria:true,ranking:true,vencendo:true,lista:true});
+  const [de,setDe]=useState('');const[ate,setAte]=useState('');
+  const [fInt,setFInt]=useState('');const[fSis,setFSis]=useState('');const[fMarca,setFMarca]=useState('');const[fProj,setFProj]=useState('');
+  const tog=(k)=>setOpts(p=>({...p,[k]:!p[k]}));
+  const STLAB={pendente:'Pendentes',aprovado:'Aprovados',reprovado:'Reprovados',convertido:'Convertidos',encerrado:'Encerrados',conflito:'Conflitos'};
+
+  // marcas presentes nos projetos (para o filtro)
+  const marcasDisp=(()=>{const s=new Set();projects.forEach(p=>(p.systems||[]).forEach(sy=>{if(sy.itens?._marca)s.add(sy.itens._marca);}));return [...s].sort();})();
+  const intsDisp=(()=>{const s=new Set();projects.forEach(p=>{const n=p.channel_links?.integrador?.name;if(n)s.add(n);});return [...s].sort();})();
+  const fabsDisp=(()=>{const s=new Set();projects.forEach(p=>{if(p._fabricante)s.add(p._fabricante);});return [...s].sort();})();
+  const [fFab,setFFab]=useState('');
+
+  const passaFiltro=(p)=>{
+    const d=new Date(p.registered_at);
+    if(de&&d<new Date(de))return false;
+    if(ate&&d>new Date(ate+'T23:59:59'))return false;
+    if(fInt&&(p.channel_links?.integrador?.name||'')!==fInt)return false;
+    if(fFab&&(p._fabricante||'')!==fFab)return false;
+    if(fProj){const t=fProj.toLowerCase();if(!String(p.title||'').toLowerCase().includes(t)&&!String(p.client_name||'').toLowerCase().includes(t))return false;}
+    if(fSis&&!(p.systems||[]).some(sy=>sy.sistema===fSis))return false;
+    if(fMarca&&!(p.systems||[]).some(sy=>sy.itens?._marca===fMarca))return false;
+    return true;
+  };
+  const ps=projects.filter(passaFiltro);
+  const byStatus=()=>{const m={};ps.forEach(p=>{m[p.status]=(m[p.status]||0)+1;});return m;};
+  const byCat=()=>{const m={};ps.forEach(p=>{m[p.category]=(m[p.category]||0)+1;});return m;};
+  const ranking=()=>{const m={};ps.forEach(p=>{const n=p.channel_links?.integrador?.name||'—';if(!m[n])m[n]={total:0,aprov:0,conv:0};m[n].total++;if(p.status==='aprovado')m[n].aprov++;if(p.status==='convertido')m[n].conv++;});return Object.entries(m).sort((a,b)=>b[1].total-a[1].total);};
+  const vencendo=()=>ps.filter(p=>p.status==='aprovado'&&daysLeft(p.expires_at)<=30&&daysLeft(p.expires_at)>=0);
+  const descTxt=(p)=>{if(!p.descontos_sistema)return '—';const e=Object.entries(p.descontos_sistema).filter(([k,v])=>v);return e.length?e.map(([k,v])=>(SISTEMAS[k]?SISTEMAS[k].label:k)+' '+v).join(', '):'—';};
+
+  const filtrosTxt=()=>{const a=[];if(de||ate)a.push('período '+(de||'início')+' a '+(ate||'hoje'));if(fInt)a.push('integrador: '+fInt);if(fFab)a.push('fabricante: '+fFab);if(fSis)a.push('sistema: '+(SISTEMAS[fSis]?SISTEMAS[fSis].label:fSis));if(fMarca)a.push('marca: '+fMarca);if(fProj)a.push('busca: '+fProj);return a.length?a.join(' · '):'sem filtros';};
+
+  const gerarHTML=()=>{
+    const hoje=new Date().toLocaleString('pt-BR');
+    let h='<html><head><meta charset="utf-8"><title>Relatório</title><style>body{font-family:Arial,sans-serif;color:#1E293B;padding:24px;max-width:820px;margin:auto}h1{color:#1A3C6E;font-size:22px;margin-bottom:2px}h2{color:#2E6CA8;font-size:15px;margin-top:24px;border-bottom:2px solid #EAF2FB;padding-bottom:4px}.sub{color:#64748B;font-size:12px;margin-bottom:18px}table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}th,td{text-align:left;padding:7px 9px;border-bottom:1px solid #E2E8F0}th{background:#F8FAFC;color:#475569}.row{display:flex;gap:16px;flex-wrap:wrap}.box{background:#F8FAFC;border-radius:8px;padding:12px 16px;min-width:110px}.box .n{font-size:22px;font-weight:800;color:#1A3C6E}.box .l{font-size:11px;color:#64748B}</style></head><body>';
+    h+='<h1>Relatório — '+(orgName||'')+'</h1><div class="sub">Gerado em '+hoje+' · '+filtrosTxt()+' · '+ps.length+' projeto(s)</div>';
+    if(opts.status){const m=byStatus();h+='<h2>Projetos por status</h2><div class="row">'+Object.keys(STLAB).map(k=>'<div class="box"><div class="n">'+(m[k]||0)+'</div><div class="l">'+STLAB[k]+'</div></div>').join('')+'</div>';}
+    if(opts.categoria){const m=byCat();h+='<h2>Por categoria</h2><div class="row">'+['cat1','cat2','cat3'].map(k=>'<div class="box"><div class="n">'+(m[k]||0)+'</div><div class="l">'+(CATS[k]?CATS[k].label:k)+'</div></div>').join('')+'</div>';}
+    if(opts.ranking&&isFabricante){h+='<h2>Ranking de integradores</h2><table><tr><th>Integrador</th><th>Total</th><th>Aprovados</th><th>Convertidos</th></tr>'+ranking().map(([n,v])=>'<tr><td>'+n+'</td><td>'+v.total+'</td><td>'+v.aprov+'</td><td>'+v.conv+'</td></tr>').join('')+'</table>';}
+    if(opts.vencendo){const v=vencendo();h+='<h2>Projetos a vencer (30 dias)</h2>'+(v.length?'<table><tr><th>Projeto</th><th>Cliente</th><th>Dias restantes</th></tr>'+v.map(p=>'<tr><td>'+(p.title||'')+'</td><td>'+(p.client_name||'')+'</td><td>'+daysLeft(p.expires_at)+'</td></tr>').join('')+'</table>':'<div class="sub">Nenhum projeto a vencer.</div>');}
+    if(opts.lista){h+='<h2>Lista de projetos</h2><table><tr><th>Projeto</th><th>Cliente</th>'+(isFabricante?'<th>Integrador</th>':'<th>Fabricante</th>')+'<th>Categoria</th><th>Status</th><th>Descontos</th></tr>'+ps.map(p=>'<tr><td>'+(p.title||'')+'</td><td>'+(p.client_name||'')+'</td><td>'+(isFabricante?(p.channel_links?.integrador?.name||'—'):(p._fabricante||'—'))+'</td><td>'+(CATS[p.category]?CATS[p.category].label:p.category)+'</td><td>'+(STLAB[p.status]||p.status)+'</td><td>'+descTxt(p)+'</td></tr>').join('')+'</table>';}
+    h+='</body></html>';return h;};
+
+  const imprimir=()=>{const w=window.open('','_blank');if(!w){alert('Permita pop-ups para imprimir/salvar o PDF.');return;}w.document.write(gerarHTML());w.document.close();setTimeout(()=>w.print(),400);};
+  const enviarEmail=()=>{const m=byStatus();const corpo='Relatório '+(orgName||'')+'%0D%0A'+filtrosTxt()+'%0D%0A%0D%0ATotal: '+ps.length+'%0D%0APendentes: '+(m.pendente||0)+'%0D%0AAprovados: '+(m.aprovado||0)+'%0D%0AConvertidos: '+(m.convertido||0)+'%0D%0A%0D%0A(Use Imprimir > Salvar como PDF no app para o relatório completo.)';window.location.href='mailto:?subject='+encodeURIComponent('Relatório - '+(orgName||''))+'&body='+corpo;};
+
+  const checks=[['status','Projetos por status'],['categoria','Por categoria'],...(isFabricante?[['ranking','Ranking de integradores']]:[]),['vencendo','Projetos a vencer'],['lista','Lista completa de projetos']];
+  const stsel=Object.entries(byStatus());
+
+  return <>
+    <div style={{fontWeight:800,fontSize:17,color:'#1E293B',marginBottom:4}}>Relatórios</div>
+    <div style={{fontSize:12,color:'var(--muted)',marginBottom:14}}>Defina filtros, veja o preview e clique em Imprimir para salvar como PDF ou enviar por e-mail.</div>
+
+    <div className="card" style={{padding:16,marginBottom:14}}>
+      <div style={{fontWeight:700,fontSize:13,color:'#1E293B',marginBottom:10}}>Período</div>
+      <div className="grid grid-2" style={{gap:8,marginBottom:12}}>
+        <div><label style={{fontSize:11,color:'var(--muted)',fontWeight:600}}>De</label><input className="input" type="date" value={de} onChange={e=>setDe(e.target.value)}/></div>
+        <div><label style={{fontSize:11,color:'var(--muted)',fontWeight:600}}>Até</label><input className="input" type="date" value={ate} onChange={e=>setAte(e.target.value)}/></div>
+      </div>
+      <div style={{fontWeight:700,fontSize:13,color:'#1E293B',marginBottom:10}}>Filtros</div>
+      <div className="grid grid-2" style={{gap:8}}>
+        {isFabricante&&<div><label style={{fontSize:11,color:'var(--muted)',fontWeight:600}}>Integrador</label>
+          <select className="input" value={fInt} onChange={e=>setFInt(e.target.value)}><option value="">Todos</option>{intsDisp.map(n=><option key={n} value={n}>{n}</option>)}</select></div>}
+        {!isFabricante&&<div><label style={{fontSize:11,color:'var(--muted)',fontWeight:600}}>Fabricante</label>
+          <select className="input" value={fFab} onChange={e=>setFFab(e.target.value)}><option value="">Todos</option>{fabsDisp.map(n=><option key={n} value={n}>{n}</option>)}</select></div>}
+        <div><label style={{fontSize:11,color:'var(--muted)',fontWeight:600}}>Sistema</label>
+          <select className="input" value={fSis} onChange={e=>setFSis(e.target.value)}><option value="">Todos</option>{Object.entries(SISTEMAS).map(([k,sd])=><option key={k} value={k}>{sd.label}</option>)}</select></div>
+        <div><label style={{fontSize:11,color:'var(--muted)',fontWeight:600}}>Marca</label>
+          <select className="input" value={fMarca} onChange={e=>setFMarca(e.target.value)}><option value="">Todas</option>{marcasDisp.map(m=><option key={m} value={m}>{m}</option>)}</select></div>
+        <div><label style={{fontSize:11,color:'var(--muted)',fontWeight:600}}>Projeto / cliente</label>
+          <input className="input" value={fProj} onChange={e=>setFProj(e.target.value)} placeholder="Digite parte do nome…"/></div>
+      </div>
+    </div>
+
+    <div className="card" style={{padding:16,marginBottom:14}}>
+      <div style={{fontWeight:700,fontSize:13,color:'#1E293B',marginBottom:10}}>Incluir no relatório</div>
+      {checks.map(([k,l])=><label key={k} style={{display:'flex',alignItems:'center',gap:10,padding:'6px 0',cursor:'pointer'}}>
+        <div onClick={()=>tog(k)} style={{width:20,height:20,borderRadius:5,border:`2px solid ${opts[k]?'var(--navy)':'#CBD5E1'}`,background:opts[k]?'var(--navy)':'#fff',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{opts[k]&&<span style={{color:'#fff',fontSize:12}}>✓</span>}</div>
+        <span style={{fontSize:13,color:'#1E293B'}}>{l}</span></label>)}
+    </div>
+
+    <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:16}}>
+      <button className="btn btn-primary" onClick={imprimir}>🖨️ Imprimir / Salvar PDF</button>
+      <button className="btn btn-ghost" onClick={enviarEmail}>✉️ Enviar resumo por e-mail</button>
+    </div>
+
+    {/* PREVIEW AO VIVO */}
+    <div style={{fontWeight:700,fontSize:13,color:'#1E293B',marginBottom:8}}>Pré-visualização</div>
+    <div className="card" style={{padding:18}}>
+      <div style={{fontWeight:800,fontSize:16,color:'var(--navy)'}}>Relatório — {orgName}</div>
+      <div style={{fontSize:11,color:'var(--muted)',marginBottom:12}}>{filtrosTxt()} · {ps.length} projeto(s)</div>
+      {opts.status&&<><div style={{fontSize:12,fontWeight:700,color:'var(--blue)',marginTop:10,marginBottom:6}}>Projetos por status</div>
+        <div style={{display:'flex',flexWrap:'wrap',gap:8}}>{Object.keys(STLAB).map(k=>{const m=byStatus();return <div key={k} style={{background:'#F8FAFC',borderRadius:7,padding:'8px 12px',minWidth:90}}><div style={{fontSize:18,fontWeight:800,color:'var(--navy)'}}>{m[k]||0}</div><div style={{fontSize:10,color:'var(--muted)'}}>{STLAB[k]}</div></div>;})}</div></>}
+      {opts.categoria&&<><div style={{fontSize:12,fontWeight:700,color:'var(--blue)',marginTop:14,marginBottom:6}}>Por categoria</div>
+        <div style={{display:'flex',flexWrap:'wrap',gap:8}}>{['cat1','cat2','cat3'].map(k=>{const m=byCat();return <div key={k} style={{background:'#F8FAFC',borderRadius:7,padding:'8px 12px',minWidth:90}}><div style={{fontSize:18,fontWeight:800,color:'var(--navy)'}}>{m[k]||0}</div><div style={{fontSize:10,color:'var(--muted)'}}>{CATS[k]?CATS[k].label:k}</div></div>;})}</div></>}
+      {opts.ranking&&isFabricante&&<><div style={{fontSize:12,fontWeight:700,color:'var(--blue)',marginTop:14,marginBottom:6}}>Ranking de integradores</div>
+        {ranking().length?ranking().map(([n,v])=><div key={n} style={{display:'flex',justifyContent:'space-between',fontSize:12,padding:'5px 0',borderBottom:'1px solid #F1F5F9'}}><span>{n}</span><span style={{color:'var(--muted)'}}>{v.total} proj · {v.aprov} aprov · {v.conv} conv</span></div>):<div style={{fontSize:12,color:'var(--muted)'}}>Sem dados.</div>}</>}
+      {opts.vencendo&&<><div style={{fontSize:12,fontWeight:700,color:'var(--blue)',marginTop:14,marginBottom:6}}>Projetos a vencer (30 dias)</div>
+        {vencendo().length?vencendo().map(p=><div key={p.id} style={{display:'flex',justifyContent:'space-between',fontSize:12,padding:'5px 0',borderBottom:'1px solid #F1F5F9'}}><span>{p.title} · {p.client_name}</span><span style={{color:daysLeft(p.expires_at)<=7?'#DC2626':'var(--muted)'}}>{daysLeft(p.expires_at)}d</span></div>):<div style={{fontSize:12,color:'var(--muted)'}}>Nenhum a vencer.</div>}</>}
+      {opts.lista&&<><div style={{fontSize:12,fontWeight:700,color:'var(--blue)',marginTop:14,marginBottom:6}}>Lista de projetos</div>
+        {ps.length?<div style={{overflowX:'auto'}}><table style={{width:'100%',borderCollapse:'collapse',fontSize:11}}><tbody>
+          <tr style={{background:'#F8FAFC'}}><th style={{textAlign:'left',padding:'6px 8px'}}>Projeto</th><th style={{textAlign:'left',padding:'6px 8px'}}>Cliente</th><th style={{textAlign:'left',padding:'6px 8px'}}>{isFabricante?'Integrador':'Fabricante'}</th><th style={{textAlign:'left',padding:'6px 8px'}}>Status</th><th style={{textAlign:'left',padding:'6px 8px'}}>Descontos</th></tr>
+          {ps.map(p=><tr key={p.id} style={{borderBottom:'1px solid #F1F5F9'}}><td style={{padding:'6px 8px'}}>{p.title}</td><td style={{padding:'6px 8px'}}>{p.client_name}</td><td style={{padding:'6px 8px'}}>{isFabricante?(p.channel_links?.integrador?.name||'—'):(p._fabricante||'—')}</td><td style={{padding:'6px 8px'}}>{STLAB[p.status]||p.status}</td><td style={{padding:'6px 8px'}}>{descTxt(p)}</td></tr>)}
+        </tbody></table></div>:<div style={{fontSize:12,color:'var(--muted)'}}>Nenhum projeto com esses filtros.</div>}</>}
+    </div>
+  </>;
+}
+function FaturasPanel({orgId}){
+  const [invs,setInvs]=useState([]);const[loading,setLoading]=useState(true);
+  useEffect(()=>{(async()=>{try{setInvs(await D.fetchInvoices(orgId));}catch(e){console.error(e);}finally{setLoading(false);}})();},[orgId]);
+  const fmt=(c)=>'R$ '+((c||0)/100).toLocaleString('pt-BR',{minimumFractionDigits:2});
+  const hoje=new Date();
+  const calcSt=(i)=>{if(i.status==='pago')return 'pago';if(new Date(i.vencimento)<hoje)return 'vencido';return 'pendente';};
+  const LAB={pago:'Paga',pendente:'A vencer',vencido:'Vencida'};
+  const COL={pago:'#10B981',pendente:'#D97706',vencido:'#DC2626'};
+  const pagas=invs.filter(i=>i.status==='pago');
+  const proximas=invs.filter(i=>i.status!=='pago'&&new Date(i.vencimento)>=hoje);
+  const vencidas=invs.filter(i=>i.status!=='pago'&&new Date(i.vencimento)<hoje);
+  if(loading)return <div className="spinner"/>;
+  const Card=({i})=>{const st=calcSt(i);return <div className="card" style={{padding:14,marginBottom:8,borderLeft:`4px solid ${COL[st]}`}}>
+    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8}}>
+      <div><div style={{fontWeight:700,fontSize:14,color:'#1E293B'}}>{new Date(i.competencia).toLocaleDateString('pt-BR',{month:'long',year:'numeric'})}</div>
+        <div style={{fontSize:11,color:'var(--muted)'}}>{i.plano_nome||''} · vence {new Date(i.vencimento).toLocaleDateString('pt-BR')}{i.pago_em?(' · paga em '+new Date(i.pago_em).toLocaleDateString('pt-BR')):''}</div></div>
+      <div style={{textAlign:'right'}}><div style={{fontSize:16,fontWeight:800,color:'#1E293B'}}>{fmt(i.valor_cents)}</div>
+        <div style={{fontSize:11,fontWeight:700,color:COL[st]}}>● {LAB[st]}</div></div>
+    </div></div>;};
+  return <>
+    <div style={{fontWeight:800,fontSize:17,color:'#1E293B',marginBottom:4}}>Faturas</div>
+    <div style={{fontSize:12,color:'var(--muted)',marginBottom:14}}>Acompanhe suas faturas mensais do plano. A cobrança automática será integrada em breve.</div>
+    {invs.length===0?<Empty text="Nenhuma fatura gerada ainda."/>:<>
+      {vencidas.length>0&&<><div style={{fontWeight:700,fontSize:13,color:'#991B1B',margin:'8px 0'}}>⚠️ Faturas vencidas ({vencidas.length})</div>{vencidas.map(i=><Card key={i.id} i={i}/>)}</>}
+      {proximas.length>0&&<><div style={{fontWeight:700,fontSize:13,color:'#92400E',margin:'14px 0 8px'}}>⏳ Próximas faturas ({proximas.length})</div>{proximas.map(i=><Card key={i.id} i={i}/>)}</>}
+      {pagas.length>0&&<><div style={{fontWeight:700,fontSize:13,color:'#166534',margin:'14px 0 8px'}}>✅ Faturas pagas ({pagas.length})</div>{pagas.map(i=><Card key={i.id} i={i}/>)}</>}
+    </>}
+  </>;
+}
+function AuditPanel({orgId}){
+  const [logs,setLogs]=useState([]);const[loading,setLoading]=useState(true);const[filtro,setFiltro]=useState('todos');const[q,setQ]=useState('');
+  useEffect(()=>{(async()=>{try{setLogs(await D.fetchAuditLog(orgId));}catch(e){console.error(e);}finally{setLoading(false);}})();},[orgId]);
+  const ICONS={'projeto.criar':'➕','projeto.aprovar':'✅','projeto.reprovar':'❌','projeto.atualizar':'📝','projeto.editar_desconto':'💰','anexo.adicionar':'📎','anexo.remover':'🗑️','integrador.excluir':'🔧','integrador.status':'🔧','integrador.tier':'🏅','marca.editar':'🏷️','usuario.criar':'👤','usuario.excluir':'🚫','usuario.senha':'🔑'};
+  const ACAO={'projeto.criar':'Projeto criado','projeto.aprovar':'Projeto aprovado','projeto.reprovar':'Projeto reprovado','projeto.atualizar':'Atualização adicionada','projeto.editar_desconto':'Descontos alterados','anexo.adicionar':'Anexo adicionado','anexo.remover':'Anexo removido','integrador.excluir':'Integrador excluído','integrador.status':'Status do integrador','integrador.tier':'Nível do integrador','marca.editar':'Marcas atualizadas','usuario.criar':'Usuário criado','usuario.excluir':'Usuário removido','usuario.senha':'Senha redefinida'};
+  const tipos=[['todos','Tudo'],['projeto','Projetos'],['anexo','Anexos'],['integrador','Integradores'],['marca','Marcas'],['usuario','Usuários']];
+  const term=q.trim().toLowerCase();
+  const shown=logs.filter(l=>(filtro==='todos'||(l.entity||'').startsWith(filtro)||(l.action||'').startsWith(filtro))&&(!term||[l.summary,l.actor_name,ACAO[l.action]].some(v=>String(v||'').toLowerCase().includes(term))));
+  // separa o "De → Para" do resto do summary para destacar
+  const splitDePara=(s)=>{if(!s)return{txt:'',dp:null};const i=s.indexOf(' — ');if(i<0)return{txt:s,dp:null};return{txt:s.slice(0,i),dp:s.slice(i+3)};};
+  if(loading)return <div className="spinner"/>;
+  return <>
+    <div style={{fontWeight:800,fontSize:17,color:'#1E293B',marginBottom:4}}>Histórico de modificações</div>
+    <div style={{fontSize:12,color:'var(--muted)',marginBottom:14}}>Registro de quem fez o quê e quando. Visível apenas para administradores.</div>
+    <SearchBox value={q} onChange={setQ} placeholder="Buscar no histórico (projeto, usuário, ação)…"/>
+    <div style={{display:'flex',gap:6,marginBottom:14,flexWrap:'wrap'}}>{tipos.map(([k,l])=><button key={k} onClick={()=>setFiltro(k)} style={{padding:'4px 10px',borderRadius:6,border:'1.5px solid',borderColor:filtro===k?'var(--navy)':'var(--border)',background:filtro===k?'#EAF2FB':'#fff',color:filtro===k?'var(--navy)':'var(--muted)',fontSize:11,fontWeight:600}}>{l}</button>)}</div>
+    {shown.length===0?<Empty text="Nenhum registro encontrado."/>:
+      <div style={{display:'flex',flexDirection:'column',gap:8}}>{shown.map(l=>{const{txt,dp}=splitDePara(l.summary);return <div key={l.id} className="card" style={{padding:'11px 14px',display:'flex',gap:10,alignItems:'flex-start'}}>
+        <span style={{fontSize:18}}>{ICONS[l.action]||'•'}</span>
+        <div style={{flex:1}}>
+          <div style={{fontSize:11,fontWeight:700,color:'var(--navy)',textTransform:'uppercase',letterSpacing:'.3px'}}>{ACAO[l.action]||l.action}</div>
+          <div style={{fontSize:13,color:'#1E293B',fontWeight:500,marginTop:1}}>{txt||l.summary}</div>
+          {dp&&<div style={{fontSize:12,color:'var(--slate)',background:'#F8FAFC',borderRadius:6,padding:'6px 9px',marginTop:5}}>{dp}</div>}
+          <div style={{fontSize:11,color:'var(--muted)',marginTop:4}}>👤 {l.actor_name||'—'} · {new Date(l.created_at).toLocaleString('pt-BR')}</div>
+        </div>
+      </div>;})}</div>}
+  </>;
+}
+function MarcasPanel({orgId}){
+  const {org,refresh}=useAuth();
+  const [marcas,setMarcas]=useState({});const[orig,setOrig]=useState({});const[loading,setLoading]=useState(true);const[busy,setBusy]=useState(false);const[saved,setSaved]=useState(false);const[logoBusy,setLogoBusy]=useState(false);
+  const onLogo=async(e)=>{const f=e.target.files?.[0];if(!f)return;if(!f.type.startsWith('image/')){alert('Selecione uma imagem.');return;}if(f.size>2097152){alert('Máximo 2 MB.');return;}setLogoBusy(true);try{await D.uploadLogo(orgId,f);await refresh?.();alert('Logo atualizada!');}catch(err){alert('Erro: '+err.message);}finally{setLogoBusy(false);e.target.value='';}};
+  const [novo,setNovo]=useState({});  // texto do campo "outra marca" por sistema
+  const load=useCallback(async()=>{try{const m=await D.fetchOrgMarcas(orgId);setMarcas(m);setOrig(JSON.parse(JSON.stringify(m)));}catch(e){console.error(e);}finally{setLoading(false);}},[orgId]);
+  useEffect(()=>{load();},[load]);
+  const addOutra=(sk)=>{const t=(novo[sk]||'').trim();if(!t)return;setSaved(false);setMarcas(p=>({...p,[sk]:[...(p[sk]||[]),t]}));setNovo(p=>({...p,[sk]:''}));};
+  const removeMarca=(sk,marca)=>{setSaved(false);setMarcas(p=>({...p,[sk]:(p[sk]||[]).filter(m=>m!==marca)}));};
+  const salvar=async()=>{setBusy(true);try{
+    const mud=[];Object.keys(SISTEMAS).forEach(k=>{const a=new Set(orig[k]||[]);const d=new Set(marcas[k]||[]);
+      const add=[...d].filter(x=>!a.has(x));const rem=[...a].filter(x=>!d.has(x));
+      if(add.length)mud.push((SISTEMAS[k]?SISTEMAS[k].label:k)+': incluiu '+add.join(', '));
+      if(rem.length)mud.push((SISTEMAS[k]?SISTEMAS[k].label:k)+': removeu '+rem.join(', '));});
+    await D.saveOrgMarcas(orgId,marcas);
+    if(mud.length)await D.audit('marca.editar','marca',orgId,'Atualizou marcas — '+mud.join('; '));
+    setOrig(JSON.parse(JSON.stringify(marcas)));setSaved(true);
+  }catch(e){alert('Erro: '+e.message);}finally{setBusy(false);}};
+  if(loading)return <div className="spinner"/>;
+  return <>
+    <div className="card" style={{padding:16,marginBottom:16}}>
+      <div style={{fontWeight:700,fontSize:13,color:'#1E293B',marginBottom:8}}>Logo da empresa</div>
+      <div style={{display:'flex',alignItems:'center',gap:14}}>
+        {org?.logo_path?<img src={D.logoUrl(org.logo_path)} alt="logo" style={{width:56,height:56,borderRadius:10,objectFit:'cover',border:'1px solid var(--border)'}}/>:<div style={{width:56,height:56,borderRadius:10,background:'#F1F5F9',display:'flex',alignItems:'center',justifyContent:'center',fontSize:24}}>🏭</div>}
+        <label className="btn btn-ghost" style={{fontSize:12,cursor:'pointer'}}>{logoBusy?'Enviando…':'Enviar logo (PNG/JPG, até 2MB)'}<input type="file" accept="image/*" style={{display:'none'}} disabled={logoBusy} onChange={onLogo}/></label>
+      </div>
+      <div style={{fontSize:11,color:'var(--muted)',marginTop:8}}>A logo aparece no topo do seu painel e ao lado do seu nome quando integradores buscam fabricantes.</div>
+    </div>
+    <div style={{fontWeight:800,fontSize:17,color:'#1E293B',marginBottom:4}}>Marcas que você fabrica</div>
+    <div style={{fontSize:12,color:'var(--muted)',marginBottom:16}}>Selecione, por sistema, as marcas que sua empresa oferece. Os integradores do seu canal só poderão escolher entre estas marcas ao registrar projetos.</div>
+    {Object.entries(SISTEMAS).map(([sk,sd])=>{const sel=marcas[sk]||[];return <div key={sk} className="card" style={{padding:14,marginBottom:10}}>
+      <div style={{fontWeight:700,fontSize:13,color:'#1E293B',marginBottom:8}}>{sd.icon} {sd.label}</div>
+      {sel.length>0?<div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:8}}>
+        {sel.map(m=><span key={m} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'5px 11px',borderRadius:99,background:'#EAF2FB',border:'1.5px solid var(--navy)',color:'var(--navy)',fontSize:12,fontWeight:600}}>{m} <button type="button" onClick={()=>removeMarca(sk,m)} style={{background:'none',border:'none',color:'#DC2626',cursor:'pointer',fontSize:14,lineHeight:1,padding:0}}>×</button></span>)}
+      </div>:<div style={{fontSize:11,color:'var(--muted)',marginBottom:8}}>Nenhuma marca cadastrada para este sistema.</div>}
+      <div style={{display:'flex',gap:6}}><input className="input" style={{fontSize:12}} placeholder="Adicionar marca…" value={novo[sk]||''} onChange={e=>setNovo(p=>({...p,[sk]:e.target.value}))} onKeyDown={e=>e.key==='Enter'&&addOutra(sk)}/>
+        <button className="btn btn-ghost" style={{fontSize:12}} onClick={()=>addOutra(sk)}>Adicionar</button></div>
+    </div>;})}
+    <div style={{display:'flex',alignItems:'center',gap:12,marginTop:8}}>
+      <button className="btn btn-primary" disabled={busy} onClick={salvar}>{busy?'Salvando…':'Salvar marcas'}</button>
+      {saved&&<span style={{color:'#10B981',fontSize:13,fontWeight:600}}>✓ Salvo</span>}
+    </div>
+  </>;
+}
+function FabricanteDashboard(){
+  const {org,membership,isAdmin}=useAuth();
+  const [tab,setTab]=useState('pipeline');const[projects,setProjects]=useState([]);const[ints,setInts]=useState([]);
+  const [sub,setSub]=useState(null);const[plans,setPlans]=useState([]);const[loading,setLoading]=useState(true);const[selected,setSelected]=useState(null);
+  const load=useCallback(async()=>{try{const[pj,ii,s,pl]=await Promise.all([D.fetchProjects(),D.fetchChannelIntegrators(org.id),D.fetchSubscription(org.id),D.fetchPlans()]);setProjects(pj);setInts(ii);setSub(s);setPlans(pl);}catch(e){console.error(e);}finally{setLoading(false);}},[org.id]);
+  useEffect(()=>{load();const u1=D.subProjects(load);const u2=D.subLinks(load);return ()=>{u1();u2();};},[load]);
+  const pend=ints.filter(i=>i.status==='pendente');const active=ints.filter(i=>i.status==='aprovado');
+  const limit=sub?.plans?.max_integrators??0;
+  const stats={total:projects.length,pendentes:projects.filter(p=>p.status==='pendente').length,aprovados:projects.filter(p=>p.status==='aprovado').length,conflitos:projects.filter(p=>p.status==='conflito').length,expirando:projects.filter(p=>p.status==='aprovado'&&daysLeft(p.expires_at)<=15).length};
+  const tabs=[['pipeline','📊 Pipeline'],['projetos','📁 Projetos'],['integradores',`🔧 Integradores${pend.length?` (${pend.length})`:''}`],['marcas','🏷️ Marcas'],['relatorios','📑 Relatórios']];
+  if(isAdmin){tabs.push(['faturas','🧾 Faturas']);tabs.push(['usuarios','👤 Usuários']);tabs.push(['historico','🕓 Histórico']);}
+  return <div style={{minHeight:'100vh'}}><Header tabs={tabs} active={tab} onTab={setTab}/>
+    <main className="container" style={{padding:'18px 16px 40px'}}>
+      {loading?<div className="spinner"/>:<>
+        {tab==='pipeline'&&<><div className="card" style={{padding:14,marginBottom:14,display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8}}>
+          <div><div style={{fontSize:12,color:'var(--muted)'}}>Integradores ativos no seu canal</div><div style={{fontSize:22,fontWeight:800,color:active.length>=limit?'#DC2626':'#1A3C6E'}}>{active.length} / {limit}</div></div>
+          {active.length>=limit&&<div style={{fontSize:12,color:'#DC2626',fontWeight:600}}>Limite do plano atingido.</div>}</div>
+          <div className="grid grid-5" style={{marginBottom:16}}>
+            {[['Total','📁',stats.total,'#1A3C6E'],['A aprovar','⏳',stats.pendentes,'#D97706'],['Aprovados','✅',stats.aprovados,'#10B981'],['Conflitos','⚠️',stats.conflitos,'#DC2626'],['Expirando','🔔',stats.expirando,'#8B5CF6']].map(([l,ic,v,co])=>
+              <div key={l} className="card" style={{padding:'11px 13px'}}><div style={{fontSize:22,fontWeight:800,color:co}}>{v}</div><div style={{fontSize:10,color:'var(--muted)',marginTop:1}}>{ic} {l}</div></div>)}</div>
+          {pend.length>0&&<div style={{background:'#FEF3C7',border:'1px solid #D97706',borderRadius:9,padding:'10px 14px',marginBottom:14,fontSize:12,color:'#92400E'}}>🔧 {pend.length} integrador(es) aguardando aprovação.</div>}
+          {(()=>{
+            const aprovados=projects.filter(p=>['aprovado','convertido'].includes(p.status));
+            const convertidos=projects.filter(p=>p.status==='convertido');
+            const decididos=projects.filter(p=>['aprovado','convertido','reprovado'].includes(p.status));
+            const taxaConv=aprovados.length?Math.round((convertidos.length/aprovados.length)*100):0;
+            const taxaAprov=projects.length?Math.round((aprovados.length/projects.length)*100):0;
+            // tempo médio de aprovação (dias) entre registered_at e approved_at
+            const comAprov=projects.filter(p=>p.approved_at&&p.registered_at);
+            const tempoMedio=comAprov.length?Math.round(comAprov.reduce((a,p)=>a+(new Date(p.approved_at)-new Date(p.registered_at))/86400000,0)/comAprov.length):null;
+            const funil={cat1:0,cat2:0,cat3:0};projects.forEach(p=>{if(funil[p.category]!=null)funil[p.category]++;});
+            const maxF=Math.max(1,funil.cat1,funil.cat2,funil.cat3);
+            return <div style={{marginBottom:16}}>
+              <div style={{fontWeight:700,fontSize:13,color:'#1E293B',marginBottom:8}}>📈 Indicadores</div>
+              <div className="grid grid-3" style={{marginBottom:12}}>
+                <div className="card" style={{padding:'11px 13px'}}><div style={{fontSize:20,fontWeight:800,color:'#10B981'}}>{taxaConv}%</div><div style={{fontSize:10,color:'var(--muted)'}}>Taxa de conversão</div><div style={{fontSize:9,color:'var(--muted)'}}>{convertidos.length} de {aprovados.length} aprovados</div></div>
+                <div className="card" style={{padding:'11px 13px'}}><div style={{fontSize:20,fontWeight:800,color:'#2E6CA8'}}>{taxaAprov}%</div><div style={{fontSize:10,color:'var(--muted)'}}>Taxa de aprovação</div><div style={{fontSize:9,color:'var(--muted)'}}>{aprovados.length} de {projects.length} registros</div></div>
+                <div className="card" style={{padding:'11px 13px'}}><div style={{fontSize:20,fontWeight:800,color:'#8B5CF6'}}>{tempoMedio==null?'—':tempoMedio+'d'}</div><div style={{fontSize:10,color:'var(--muted)'}}>Tempo médio de aprovação</div><div style={{fontSize:9,color:'var(--muted)'}}>{comAprov.length} aprovações</div></div>
+              </div>
+              <div className="card" style={{padding:14,marginBottom:12}}>
+                <div style={{fontSize:12,fontWeight:700,color:'#1E293B',marginBottom:10}}>Funil por categoria</div>
+                {[['cat1','CAT 1 — Especificação','#2E6CA8'],['cat2','CAT 2 — Projeto Ativo','#0D9488'],['cat3','CAT 3 — Venda Ativa','#10B981']].map(([k,l,co])=>
+                  <div key={k} style={{marginBottom:8}}><div style={{display:'flex',justifyContent:'space-between',fontSize:11,marginBottom:3}}><span style={{color:'var(--slate)'}}>{l}</span><span style={{fontWeight:700,color:co}}>{funil[k]}</span></div>
+                    <div style={{height:8,background:'#F1F5F9',borderRadius:99,overflow:'hidden'}}><div style={{height:'100%',width:(funil[k]/maxF*100)+'%',background:co,borderRadius:99,transition:'width .4s'}}/></div></div>)}
+              </div>
+              {(()=>{
+                // evolucao dos ultimos 6 meses
+                const meses=[];const now=new Date();
+                for(let i=5;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);meses.push({key:d.getFullYear()+'-'+d.getMonth(),label:d.toLocaleDateString('pt-BR',{month:'short'}),reg:0,apr:0});}
+                const idx={};meses.forEach((m,i)=>idx[m.key]=i);
+                projects.forEach(p=>{if(!p.registered_at)return;const d=new Date(p.registered_at);const k=d.getFullYear()+'-'+d.getMonth();if(idx[k]!=null){meses[idx[k]].reg++;if(['aprovado','convertido'].includes(p.status))meses[idx[k]].apr++;}});
+                const maxM=Math.max(1,...meses.map(m=>m.reg));
+                return <div className="card" style={{padding:14}}>
+                  <div style={{fontSize:12,fontWeight:700,color:'#1E293B',marginBottom:4}}>Evolução (últimos 6 meses)</div>
+                  <div style={{fontSize:10,color:'var(--muted)',marginBottom:12}}><span style={{color:'#2E6CA8',fontWeight:700}}>■</span> Registrados &nbsp; <span style={{color:'#10B981',fontWeight:700}}>■</span> Aprovados</div>
+                  <div style={{display:'flex',alignItems:'flex-end',gap:8,height:120}}>
+                    {meses.map((m,i)=><div key={i} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
+                      <div style={{flex:1,display:'flex',alignItems:'flex-end',gap:3,width:'100%',justifyContent:'center'}}>
+                        <div title={'Registrados: '+m.reg} style={{width:'42%',height:(m.reg/maxM*90)+'%',minHeight:m.reg?4:0,background:'#2E6CA8',borderRadius:'4px 4px 0 0',transition:'height .4s'}}/>
+                        <div title={'Aprovados: '+m.apr} style={{width:'42%',height:(m.apr/maxM*90)+'%',minHeight:m.apr?4:0,background:'#10B981',borderRadius:'4px 4px 0 0',transition:'height .4s'}}/>
+                      </div>
+                      <div style={{fontSize:10,color:'var(--muted)',fontWeight:600}}>{m.label}</div>
+                      <div style={{fontSize:10,color:'#1E293B',fontWeight:700}}>{m.reg}</div>
+                    </div>)}
+                  </div>
+                </div>;
+              })()}
+            </div>;
+          })()}
+          <div style={{fontWeight:700,fontSize:13,color:'#1E293B',marginBottom:8}}>Registros aguardando análise ({stats.pendentes})</div>
+          {projects.filter(p=>p.status==='pendente').length===0?<div style={{textAlign:'center',padding:30,color:'var(--muted)',fontSize:13}}>Nenhum registro pendente. ✅</div>:projects.filter(p=>p.status==='pendente').map(p=><ProjectRow key={p.id} p={p} onSelect={setSelected} showInt/>)}</>}
+        {tab==='projetos'&&<FabProjects projects={projects} onSelect={setSelected}/>}
+        {tab==='integradores'&&<FabInts ints={ints} active={active.length} limit={limit} uid={membership.id} onChanged={load} onUpgrade={()=>setTab('plano')}/>}
+        {tab==='marcas'&&<MarcasPanel orgId={org.id}/>}
+        {tab==='relatorios'&&<ReportsPanel projects={projects} ints={ints} isFabricante={true} orgName={org.name}/>}
+        {tab==='faturas'&&isAdmin&&<FaturasPanel orgId={org.id}/>}
+        {tab==='plano'&&isAdmin&&<FabPlano sub={sub} plans={plans} active={active.length} orgId={org.id} onChanged={load}/>}
+        {tab==='usuarios'&&isAdmin&&<MembersPanel orgId={org.id} myId={membership.id} isAdmin={isAdmin}/>}
+        {tab==='historico'&&isAdmin&&<AuditPanel orgId={org.id}/>}
+      </>}
+    </main>
+    {selected&&<ProjectDetailModal project={selected} onClose={()=>setSelected(null)} onChanged={load} isFabricante={true} currentUserId={membership.id}/>}
+  </div>;
+}
+function FabProjects({projects,onSelect}){const[status,setStatus]=useState('todos');const[fInt,setFInt]=useState('');const[q,setQ]=useState('');
+  const intsDisp=(()=>{const s=new Set();projects.forEach(p=>{const n=p.channel_links?.integrador?.name;if(n)s.add(n);});return [...s].sort();})();
+  const fabsDisp=(()=>{const s=new Set();projects.forEach(p=>{if(p._fabricante)s.add(p._fabricante);});return [...s].sort();})();
+  const [fFab,setFFab]=useState('');
+  const term=q.trim().toLowerCase();
+  const f=projects.filter(p=>(status==='todos'||p.status===status)&&(!fInt||(p.channel_links?.integrador?.name||'')===fInt)&&(!term||[p.title,p.client_name,p.client_cnpj].some(v=>String(v||'').toLowerCase().includes(term))));
+  return <><SearchBox value={q} onChange={setQ} placeholder="Buscar por projeto, cliente, CNPJ…"/>
+    <div style={{marginBottom:12}}><label style={{fontSize:11,color:'var(--muted)',fontWeight:600,display:'block',marginBottom:3}}>Filtrar por integrador</label>
+      <select className="input" value={fInt} onChange={e=>setFInt(e.target.value)}><option value="">Todos os integradores</option>{intsDisp.map(n=><option key={n} value={n}>{n}</option>)}</select></div>
+    <div style={{display:'flex',gap:4,flexWrap:'wrap',marginBottom:14}}>
+    {[['todos','Todos'],['pendente','Pendentes'],['aprovado','Aprovados'],['conflito','Conflitos'],['convertido','Convertidos'],['reprovado','Reprovados']].map(([k,l])=><Filter key={k} active={status===k} onClick={()=>setStatus(k)}>{l}</Filter>)}</div>
+    {f.map(p=><ProjectRow key={p.id} p={p} onSelect={onSelect} showInt/>)}{f.length===0&&<Empty text="Nenhum projeto."/>}</>;}
+function FabInts({ints,active,limit,uid,onChanged,onUpgrade}){const[busy,setBusy]=useState(false);const[q,setQ]=useState('');
+  const act=async(fn)=>{setBusy(true);try{await fn();await onChanged();}catch(e){alert(e.message);}finally{setBusy(false);}};
+  const term=q.trim().toLowerCase();
+  const pend=ints.filter(i=>i.status==='pendente');
+  const others=ints.filter(i=>i.status!=='pendente'&&(!term||[i.integrador?.name,i.integrador?.cnpj].some(v=>String(v||'').toLowerCase().includes(term))));const full=active>=limit;
+  return <><div className="card" style={{padding:12,marginBottom:14,display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8}}>
+    <div style={{fontSize:12,color:'var(--muted)'}}>Integradores ativos: <strong style={{color:full?'#DC2626':'#1A3C6E'}}>{active} / {limit}</strong></div>
+    {full&&<button className="btn btn-primary" style={{fontSize:12}} onClick={onUpgrade}>Fazer upgrade</button>}</div>
+    {pend.length>0&&<><div style={{fontWeight:700,fontSize:13,color:'#92400E',marginBottom:8}}>Solicitações de vínculo ({pend.length})</div>
+      {pend.map(i=><div key={i.id} className="card" style={{padding:14,marginBottom:8,borderLeft:'4px solid #D97706'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:10}}>
+          <div><div style={{fontWeight:700,fontSize:14}}>{i.integrador?.name}</div><div style={{fontSize:11,color:'var(--muted)'}}>{i.integrador?.cnpj||'CNPJ não informado'}</div></div>
+          <div style={{display:'flex',gap:8}}><button className="btn btn-success" style={{fontSize:12}} disabled={busy||full} onClick={()=>act(()=>D.setLinkStatus(i.id,'aprovado',i.integrador?.name,i.status))}>Aprovar</button>
+            <button className="btn btn-danger" style={{fontSize:12}} disabled={busy} onClick={()=>act(()=>D.setLinkStatus(i.id,'rejeitado',i.integrador?.name,i.status))}>Rejeitar</button></div></div>
+        {full&&<div style={{fontSize:11,color:'#DC2626',marginTop:6}}>Limite do plano atingido — faça upgrade.</div>}</div>)}</>}
+    <div style={{fontWeight:700,fontSize:13,color:'#1E293B',margin:'16px 0 8px'}}>Integradores do canal ({others.length})</div>
+    <SearchBox value={q} onChange={setQ} placeholder="Buscar integrador por nome ou CNPJ…"/>
+    {others.map(i=><div key={i.id} className="card" style={{padding:14,marginBottom:8}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:10}}>
+        <div><div style={{display:'flex',alignItems:'center',gap:8,marginBottom:2}}><span style={{fontWeight:700,fontSize:14}}>{i.integrador?.name}</span><TierBadge tier={i.tier}/><StatusBadge status={i.status}/></div>
+          <div style={{fontSize:11,color:'var(--muted)'}}>{i.integrador?.cnpj||'—'}</div></div>
+        <div style={{display:'flex',gap:6,alignItems:'center',flexWrap:'wrap'}}>
+          <select className="input" style={{width:'auto',padding:'5px 8px',fontSize:12}} value={i.tier} disabled={busy} onChange={e=>act(()=>D.setLinkTier(i.id,e.target.value,i.integrador?.name,i.tier))}>
+            {Object.keys(TIERS).map(t=><option key={t} value={t}>{TIERS[t].label}</option>)}</select>
+          {i.status==='aprovado'?<button className="btn btn-ghost" style={{fontSize:12}} disabled={busy} onClick={()=>act(()=>D.setLinkStatus(i.id,'suspenso',i.integrador?.name,i.status))}>Suspender</button>
+            :<button className="btn btn-success" style={{fontSize:12}} disabled={busy||full} onClick={()=>act(()=>D.setLinkStatus(i.id,'aprovado',i.integrador?.name,i.status))}>Reativar</button>}
+          <button className="btn btn-danger" style={{fontSize:12}} disabled={busy} onClick={()=>{if(confirm('Excluir o vínculo com '+(i.integrador?.name||'este integrador')+'? Os projetos deste canal serão removidos. Não há volta.'))act(()=>D.deleteLink(i.id));}}>Excluir</button></div></div>
+</div>)}
+    {others.length===0&&pend.length===0&&<div style={{textAlign:'center',padding:30,color:'var(--muted)',fontSize:13}}>Nenhum integrador ainda. Eles solicitam vínculo buscando sua empresa.</div>}</>;}
+function FabPlano({sub,plans,active,orgId,onChanged}){const[busy,setBusy]=useState(false);const cur=sub?.plan_id;
+  const pick=async(id)=>{setBusy(true);try{await D.changePlan(orgId,id);await onChanged();}catch(e){alert(e.message);}finally{setBusy(false);}};
+  return <><div style={{fontWeight:800,fontSize:17,color:'#1E293B',marginBottom:4}}>Plano e assinatura</div>
+    <div style={{fontSize:12,color:'var(--muted)',marginBottom:16}}>Você paga pela quantidade de integradores ativos. Atualmente: <strong>{active}</strong> ativos.</div>
+    <div className="grid grid-3">{plans.map(p=>{const isCur=p.id===cur;const small=active>p.max_integrators;
+      return <div key={p.id} className="card" style={{padding:18,border:isCur?'2px solid var(--navy)':'1px solid var(--border)'}}>
+        <div style={{fontWeight:800,fontSize:16,color:'var(--navy)'}}>{p.name}</div>
+        <div style={{fontSize:26,fontWeight:900,color:'#1E293B',margin:'8px 0'}}>R$ {(p.price_cents/100).toLocaleString('pt-BR',{minimumFractionDigits:2})}<span style={{fontSize:12,color:'var(--muted)',fontWeight:400}}>/mês</span></div>
+        <div style={{fontSize:13,color:'var(--slate)',marginBottom:14}}>Até <strong>{p.max_integrators}</strong> integradores ativos</div>
+        {isCur?<button className="btn btn-ghost" style={{width:'100%'}} disabled>Plano atual</button>
+          :<button className="btn btn-primary" style={{width:'100%'}} disabled={busy||small} onClick={()=>pick(p.id)}>{small?'Indisponível':'Escolher'}</button>}</div>;})}</div>
+    <div style={{fontSize:11,color:'var(--muted)',marginTop:14}}>A cobrança real é processada fora do app. Aqui controlamos o plano e o limite.</div></>;}
+
+// ============================ DEVELOPER PANEL ==============================
+function DevOrgCard({o,busy,myMembershipId,onChanged,onBusy}){
+  const [edit,setEdit]=useState(false);
+  const [ef,setEf]=useState({name:o.name||'',cnpj:o.cnpj||'',phone:o.phone||''});
+  const [showNew,setShowNew]=useState(false);
+  const [nf,setNf]=useState({full_name:'',email:'',password:'',role:'member'});
+  const setNF=(k,v)=>setNf(p=>({...p,[k]:v}));
+  const act=async(fn)=>{onBusy(true);try{await fn();await onChanged();}catch(e){alert('Erro: '+e.message);}finally{onBusy(false);}};
+  const salvarOrg=()=>act(async()=>{await D.devUpdateOrg(o.id,{name:ef.name,cnpj:ef.cnpj,phone:ef.phone});setEdit(false);});
+  const delOrg=()=>{if(!confirm('EXCLUIR a empresa "'+o.name+'" e TODOS os seus usuários, vínculos e projetos? Não há volta.'))return;act(async()=>{await D.callManageUser({action:'delete_org',org_id:o.id});});};
+  const delUser=(uid,nome)=>{if(!confirm('Remover o usuário "'+nome+'"?'))return;act(async()=>{await D.callManageUser({action:'delete_user',target_user_id:uid});});};
+  const resetPass=(uid,nome)=>{const np=prompt('Nova senha para '+nome+' (mínimo 6):');if(!np)return;if(np.length<6){alert('Senha curta.');return;}act(async()=>{await D.devResetPassword(uid,np);alert('Senha redefinida.');});};
+  const changeRole=(mid,novo,nome)=>{if(!confirm('Mudar '+nome+' para '+(novo==='admin'?'Administrador':'Usuário')+'?'))return;act(async()=>{await D.setMemberRole(mid,novo);});};
+  const toggleDev=(mid,nome,atual)=>{if(!confirm((atual?'Remover':'Conceder')+' acesso de DESENVOLVEDOR para '+nome+'?'))return;act(async()=>{await D.devSetDeveloper(mid,!atual);});};
+  const criarUser=()=>{if(!nf.full_name||!nf.email||!nf.password){alert('Preencha nome, e-mail e senha.');return;}if(nf.password.length<6){alert('Senha precisa de 6+ caracteres.');return;}act(async()=>{await D.devCreateUserInOrg(o.id,nf.email,nf.password,nf.full_name,nf.role);setNf({full_name:'',email:'',password:'',role:'member'});setShowNew(false);alert('Usuário criado!');});};
+  return <div className="card" style={{padding:14,marginBottom:10,borderLeft:`4px solid ${o.type==='fabricante'?'#1A3C6E':'#0D9488'}`}}>
+    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:8}}>
+      <div><div style={{fontWeight:700,fontSize:14,color:'#1E293B'}}>{o.type==='fabricante'?'🏭':'🔧'} {o.name}</div>
+        <div style={{fontSize:11,color:'var(--muted)'}}>{o.cnpj||'sem CNPJ'}{o.phone?(' · '+o.phone):''} · {(o.memberships?.length||0)} usuário(s)</div></div>
+      <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+        <button className="btn btn-ghost" style={{fontSize:12,padding:'6px 10px'}} disabled={busy} onClick={()=>setEdit(e=>!e)}>✏️ Editar</button>
+        <button className="btn btn-danger" style={{fontSize:12,padding:'6px 10px'}} disabled={busy} onClick={delOrg}>Excluir</button>
+      </div>
+    </div>
+    {edit&&<div style={{marginTop:10,background:'#F8FAFC',borderRadius:8,padding:12}}>
+      <div style={{fontSize:11,fontWeight:700,color:'#1E293B',marginBottom:8}}>Dados da empresa</div>
+      <div className="grid grid-2" style={{gap:8}}>
+        <div><label style={{fontSize:10,color:'var(--muted)',fontWeight:600}}>Nome</label><input className="input" style={{fontSize:12}} value={ef.name} onChange={e=>setEf(p=>({...p,name:e.target.value}))}/></div>
+        <div><label style={{fontSize:10,color:'var(--muted)',fontWeight:600}}>CNPJ</label><input className="input" style={{fontSize:12}} value={ef.cnpj} onChange={e=>setEf(p=>({...p,cnpj:e.target.value}))}/></div>
+        <div><label style={{fontSize:10,color:'var(--muted)',fontWeight:600}}>Telefone</label><input className="input" style={{fontSize:12}} value={ef.phone} onChange={e=>setEf(p=>({...p,phone:e.target.value}))}/></div>
+      </div>
+      <div style={{display:'flex',gap:8,marginTop:8}}><button className="btn btn-primary" style={{fontSize:12}} disabled={busy} onClick={salvarOrg}>Salvar</button>
+        <button className="btn btn-ghost" style={{fontSize:12}} onClick={()=>setEdit(false)}>Cancelar</button></div>
+    </div>}
+    <div style={{marginTop:10,borderTop:'1px solid var(--border)',paddingTop:10,display:'flex',flexDirection:'column',gap:6}}>
+      {(o.memberships||[]).map(m=><div key={m.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+        <div style={{fontSize:12,color:'var(--slate)'}}>{m.full_name} <span style={{fontSize:10,color:'var(--muted)'}}>· {m.role}{m.is_developer?' · DEV':''}</span></div>
+        <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+          <button className="btn btn-ghost" style={{fontSize:11,padding:'4px 8px'}} disabled={busy} onClick={()=>changeRole(m.id,m.role==='admin'?'member':'admin',m.full_name)}>{m.role==='admin'?'tornar usuário':'tornar admin'}</button>
+          <button className="btn btn-ghost" style={{fontSize:11,padding:'4px 8px'}} disabled={busy} onClick={()=>resetPass(m.user_id,m.full_name)}>trocar senha</button>
+          {m.id!==myMembershipId&&<button className="btn btn-ghost" style={{fontSize:11,padding:'4px 8px',color:m.is_developer?'#D97706':'#8B5CF6'}} disabled={busy} onClick={()=>toggleDev(m.id,m.full_name,m.is_developer)}>{m.is_developer?'remover DEV':'tornar DEV'}</button>}
+          {m.id!==myMembershipId&&<button className="btn btn-ghost" style={{fontSize:11,padding:'4px 8px',color:'#DC2626'}} disabled={busy} onClick={()=>delUser(m.user_id,m.full_name)}>remover</button>}
+        </div>
+      </div>)}
+      {!showNew?<button className="btn btn-ghost" style={{fontSize:12,alignSelf:'flex-start',marginTop:4}} disabled={busy} onClick={()=>setShowNew(true)}>+ Novo usuário</button>
+      :<div style={{background:'#F0F9FF',borderRadius:8,padding:12,marginTop:4}}>
+        <div style={{fontSize:11,fontWeight:700,color:'#1E293B',marginBottom:8}}>Novo usuário em {o.name}</div>
+        <div className="grid grid-2" style={{gap:8,marginBottom:8}}>
+          <input className="input" style={{fontSize:12}} placeholder="Nome completo" value={nf.full_name} onChange={e=>setNF('full_name',e.target.value)}/>
+          <input className="input" style={{fontSize:12}} placeholder="E-mail" value={nf.email} onChange={e=>setNF('email',e.target.value)}/>
+          <input className="input" style={{fontSize:12}} placeholder="Senha (mín. 6)" value={nf.password} onChange={e=>setNF('password',e.target.value)}/>
+          <select className="input" style={{fontSize:12}} value={nf.role} onChange={e=>setNF('role',e.target.value)}><option value="member">Usuário</option><option value="admin">Administrador</option></select>
+        </div>
+        <div style={{display:'flex',gap:8}}><button className="btn btn-primary" style={{fontSize:12}} disabled={busy} onClick={criarUser}>Criar</button>
+          <button className="btn btn-ghost" style={{fontSize:12}} onClick={()=>setShowNew(false)}>Cancelar</button></div>
+      </div>}
+    </div>
+  </div>;
+}
+function DeveloperPanel(){
+  const {membership,signOut}=useAuth();
+  const [tab,setTab]=useState('empresas');
+  const [orgs,setOrgs]=useState([]);const[subs,setSubs]=useState([]);const[loading,setLoading]=useState(true);const[busy,setBusy]=useState(false);
+  const [filter,setFilter]=useState('todos');const[q,setQ]=useState('');const[payFilter,setPayFilter]=useState('todos');
+  const load=useCallback(async()=>{try{const o=await D.devFetchOrgs();setOrgs(o||[]);}catch(e){alert('Erro ao carregar empresas: '+e.message);}try{const s=await D.devFetchSubs();setSubs(s||[]);}catch(e){console.error('subs',e);setSubs([]);}finally{setLoading(false);}},[]);
+  useEffect(()=>{load();},[load]);
+  const setPay=async(fabId,status)=>{setBusy(true);try{await D.devSetPayment(fabId,status);await load();}catch(e){alert('Erro: '+e.message);}finally{setBusy(false);}};
+
+  const fabs=orgs.filter(o=>o.type==='fabricante');const ints=orgs.filter(o=>o.type==='integrador');
+  const term=q.trim().toLowerCase();
+  const shownOrgs=(filter==='fabricantes'?fabs:filter==='integradores'?ints:orgs).filter(o=>!term||[o.name,o.cnpj].some(v=>String(v||'').toLowerCase().includes(term)));
+
+  const fmt=(c)=>'R$ '+((c||0)/100).toLocaleString('pt-BR',{minimumFractionDigits:0});
+  const PAYLAB={pago:'Pago',pendente:'Pendente',cancelado:'Cancelado'};
+  const PAYCOL={pago:'#10B981',pendente:'#D97706',cancelado:'#DC2626'};
+  const shownSubs=subs.filter(s=>payFilter==='todos'||(s.payment_status||'pendente')===payFilter);
+  const totPago=subs.filter(s=>s.payment_status==='pago').reduce((a,s)=>a+(s.plans?.price_cents||0),0);
+  const totPend=subs.filter(s=>(s.payment_status||'pendente')==='pendente').reduce((a,s)=>a+(s.plans?.price_cents||0),0);
+  const nCancel=subs.filter(s=>s.payment_status==='cancelado').length;
+
+  return <div style={{minHeight:'100vh'}}>
+    <header style={{background:'#0f172a',position:'sticky',top:0,zIndex:50}}>
+      <div className="container" style={{display:'flex',alignItems:'center',justifyContent:'space-between',height:56}}>
+        <div style={{display:'flex',alignItems:'center',gap:10}}><span style={{fontSize:20}}>🛠️</span>
+          <div><div style={{color:'#fff',fontWeight:800,fontSize:13}}>Painel do Desenvolvedor</div>
+          <div style={{color:'rgba(255,255,255,.5)',fontSize:9}}>Administração da plataforma</div></div></div>
+        <button onClick={signOut} className="btn" style={{background:'rgba(255,255,255,.15)',color:'#fff',padding:'6px 12px',fontSize:12}}>Sair</button>
+      </div>
+      <div className="container" style={{display:'flex',gap:4,paddingBottom:8}}>
+        {[['empresas','🏢 Empresas'],['pagamentos','💳 Pagamentos']].map(([k,l])=>
+          <button key={k} onClick={()=>setTab(k)} style={{padding:'5px 12px',borderRadius:6,border:'none',background:tab===k?'rgba(255,255,255,.2)':'transparent',color:'#fff',fontSize:12,fontWeight:600}}>{l}</button>)}
+      </div>
+    </header>
+    <main className="container" style={{padding:'18px 16px 40px'}}>
+      <div style={{background:'linear-gradient(90deg,#0f172a,#1e293b)',color:'#fff',borderRadius:10,padding:'10px 14px',marginBottom:16,display:'flex',alignItems:'center',gap:10,fontSize:13}}>
+        <span style={{fontSize:18}}>🛠️</span>
+        <div style={{flex:1}}><strong>Você está logado como Desenvolvedor.</strong> <span style={{opacity:.8}}>Acesso total à administração da plataforma.</span></div>
+        <button onClick={()=>{window.location.hash='';}} style={{background:'rgba(255,255,255,.15)',color:'#fff',border:'none',borderRadius:7,padding:'5px 10px',fontSize:11,fontWeight:600,cursor:'pointer'}}>← Voltar ao meu painel</button>
+      </div>
+      {loading?<div className="spinner"/>:tab==='empresas'?<>
+        <div style={{display:'flex',gap:12,marginBottom:16,flexWrap:'wrap'}}>
+          <div className="card" style={{padding:'11px 16px',flex:1,minWidth:110}}><div style={{fontSize:22,fontWeight:800,color:'#1A3C6E'}}>{fabs.length}</div><div style={{fontSize:11,color:'var(--muted)'}}>🏭 Fabricantes</div></div>
+          <div className="card" style={{padding:'11px 16px',flex:1,minWidth:110}}><div style={{fontSize:22,fontWeight:800,color:'#0D9488'}}>{ints.length}</div><div style={{fontSize:11,color:'var(--muted)'}}>🔧 Integradores</div></div>
+          <div className="card" style={{padding:'11px 16px',flex:1,minWidth:110}}><div style={{fontSize:22,fontWeight:800,color:'#8B5CF6'}}>{orgs.reduce((a,o)=>a+(o.memberships?.length||0),0)}</div><div style={{fontSize:11,color:'var(--muted)'}}>👤 Usuários</div></div>
+        </div>
+        <SearchBox value={q} onChange={setQ} placeholder="Buscar empresa por nome ou CNPJ…"/>
+        <div style={{display:'flex',gap:4,marginBottom:14,flexWrap:'wrap'}}>
+          {[['todos','Todas'],['fabricantes','Fabricantes'],['integradores','Integradores']].map(([k,l])=>
+            <button key={k} onClick={()=>setFilter(k)} style={{padding:'4px 10px',borderRadius:6,border:'1.5px solid',borderColor:filter===k?'#0f172a':'var(--border)',background:filter===k?'#e2e8f0':'#fff',color:filter===k?'#0f172a':'var(--muted)',fontSize:11,fontWeight:600}}>{l}</button>)}
+        </div>
+        {shownOrgs.map(o=><DevOrgCard key={o.id} o={o} busy={busy} myMembershipId={membership.id} onChanged={load} onBusy={setBusy}/>)}
+        {shownOrgs.length===0&&<Empty text="Nenhuma empresa encontrada."/>}
+      </>:<>
+        {/* PAGAMENTOS */}
+        <div style={{display:'flex',gap:12,marginBottom:16,flexWrap:'wrap'}}>
+          <div className="card" style={{padding:'11px 16px',flex:1,minWidth:120}}><div style={{fontSize:20,fontWeight:800,color:'#10B981'}}>{fmt(totPago)}</div><div style={{fontSize:11,color:'var(--muted)'}}>✅ Recebido (pago)</div></div>
+          <div className="card" style={{padding:'11px 16px',flex:1,minWidth:120}}><div style={{fontSize:20,fontWeight:800,color:'#D97706'}}>{fmt(totPend)}</div><div style={{fontSize:11,color:'var(--muted)'}}>⏳ A receber (pendente)</div></div>
+          <div className="card" style={{padding:'11px 16px',flex:1,minWidth:120}}><div style={{fontSize:20,fontWeight:800,color:'#DC2626'}}>{nCancel}</div><div style={{fontSize:11,color:'var(--muted)'}}>🚫 Cancelados</div></div>
+        </div>
+        <div style={{background:'#FEF3C7',border:'1px solid #D97706',borderRadius:9,padding:'9px 13px',marginBottom:14,fontSize:11,color:'#92400E'}}>A cobrança automática (Stripe/Pagar.me) será integrada depois. Por ora, marque o status manualmente — a estrutura já está pronta para o gateway atualizar sozinho no futuro.</div>
+        <div style={{display:'flex',gap:4,marginBottom:14,flexWrap:'wrap'}}>
+          {[['todos','Todos'],['pago','Pagos'],['pendente','Pendentes'],['cancelado','Cancelados']].map(([k,l])=>
+            <button key={k} onClick={()=>setPayFilter(k)} style={{padding:'4px 10px',borderRadius:6,border:'1.5px solid',borderColor:payFilter===k?'#0f172a':'var(--border)',background:payFilter===k?'#e2e8f0':'#fff',color:payFilter===k?'#0f172a':'var(--muted)',fontSize:11,fontWeight:600}}>{l}</button>)}
+        </div>
+        {shownSubs.map(s=>{const st=s.payment_status||'pendente';return <div key={s.fabricante_id} className="card" style={{padding:14,marginBottom:10,borderLeft:`4px solid ${PAYCOL[st]}`}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:8}}>
+            <div><div style={{fontWeight:700,fontSize:14,color:'#1E293B'}}>🏭 {s.fabricante?.name||'—'}</div>
+              <div style={{fontSize:11,color:'var(--muted)'}}>{s.fabricante?.cnpj||'sem CNPJ'} · {s.plans?.name||'—'} · {fmt(s.plans?.price_cents)}/mês</div>
+              <div style={{fontSize:11,marginTop:4}}><span style={{color:PAYCOL[st],fontWeight:700}}>● {PAYLAB[st]}</span>
+                {s.last_payment_at&&st==='pago'&&<span style={{color:'var(--muted)'}}> · último pgto {new Date(s.last_payment_at).toLocaleDateString('pt-BR')}</span>}
+                {s.canceled_at&&st==='cancelado'&&<span style={{color:'var(--muted)'}}> · cancelado em {new Date(s.canceled_at).toLocaleDateString('pt-BR')}</span>}</div></div>
+          </div>
+          <div style={{display:'flex',gap:6,marginTop:10,flexWrap:'wrap'}}>
+            <button className="btn btn-success" style={{fontSize:11,padding:'5px 10px'}} disabled={busy||st==='pago'} onClick={()=>setPay(s.fabricante_id,'pago')}>Marcar pago</button>
+            <button className="btn btn-ghost" style={{fontSize:11,padding:'5px 10px'}} disabled={busy||st==='pendente'} onClick={()=>setPay(s.fabricante_id,'pendente')}>Marcar pendente</button>
+            <button className="btn btn-danger" style={{fontSize:11,padding:'5px 10px'}} disabled={busy||st==='cancelado'} onClick={()=>setPay(s.fabricante_id,'cancelado')}>Marcar cancelado</button>
+          </div>
+        </div>;})}
+        {shownSubs.length===0&&<Empty text="Nenhuma assinatura nesta categoria."/>}
+      </>}
+    </main>
+  </div>;
+}
+
+// ============================ APP ROOT ======================================
+function LgpdBanner(){
+  const [show,setShow]=useState(()=>!window.__lgpd_ok);
+  const [showPriv,setShowPriv]=useState(false);
+  if(!show&&!showPriv)return null;
+  const aceitar=()=>{window.__lgpd_ok=true;setShow(false);};
+  return <>
+    {show&&<div style={{position:'fixed',bottom:0,left:0,right:0,background:'#0f172a',color:'#fff',padding:'14px 18px',zIndex:200,display:'flex',gap:14,alignItems:'center',justifyContent:'center',flexWrap:'wrap',animation:'slidedown .3s ease'}}>
+      <span style={{fontSize:12,maxWidth:560}}>Usamos seus dados apenas para operar o programa de canal (registro de oportunidades). Ao continuar, você concorda com nossa <a onClick={()=>setShowPriv(true)} style={{color:'#7DD3FC',cursor:'pointer',textDecoration:'underline'}}>Política de Privacidade</a>.</span>
+      <button onClick={aceitar} className="btn btn-primary" style={{fontSize:12,padding:'7px 16px'}}>Concordar</button>
+    </div>}
+    {showPriv&&<div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setShowPriv(false)} style={{zIndex:210}}><div className="modal" style={{maxWidth:600}}>
+      <div style={{padding:'16px 22px',borderBottom:'1px solid var(--border)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div style={{fontWeight:800,fontSize:16,color:'#1E293B'}}>Política de Privacidade (LGPD)</div>
+        <button onClick={()=>setShowPriv(false)} style={{background:'none',border:'none',fontSize:18,color:'var(--muted)'}}>✕</button></div>
+      <div style={{padding:20,fontSize:13,color:'var(--slate)',lineHeight:1.6,maxHeight:'60vh',overflowY:'auto'}}>
+        <p style={{marginBottom:10}}><strong>1. Quais dados coletamos.</strong> Nome, e-mail, telefone, CNPJ da empresa e dados dos projetos registrados (cliente, endereço, contatos e documentos anexados).</p>
+        <p style={{marginBottom:10}}><strong>2. Para que usamos.</strong> Exclusivamente para operar o programa de canal: registrar oportunidades, gerenciar vínculos entre fabricantes e integradores, conceder descontos e emitir faturas.</p>
+        <p style={{marginBottom:10}}><strong>3. Compartilhamento.</strong> Os dados de um projeto são visíveis apenas ao integrador que o criou e ao fabricante do canal correspondente. Não vendemos nem cedemos dados a terceiros.</p>
+        <p style={{marginBottom:10}}><strong>4. Seus direitos.</strong> Você pode acessar, corrigir, exportar ou excluir seus dados a qualquer momento, pelo seu perfil (menu no canto superior direito).</p>
+        <p style={{marginBottom:10}}><strong>5. Retenção.</strong> Os dados são mantidos enquanto a conta estiver ativa. Ao excluir a conta/empresa, os dados associados são removidos.</p>
+        <p style={{marginBottom:10}}><strong>6. Segurança.</strong> O acesso é protegido por autenticação e regras de isolamento por empresa. Documentos ficam em armazenamento privado.</p>
+        <p><strong>7. Contato.</strong> Para exercer seus direitos ou tirar dúvidas, fale com o administrador da sua empresa ou com o suporte da plataforma.</p>
+      </div>
+    </div></div>}
+  </>;
+}
+function App(){
+  const {user,org,loading,isDeveloper}=useAuth();
+  const [page,setPage]=useState('login'); // login | signup
+  const [hash,setHash]=useState(window.location.hash||'');
+  useEffect(()=>{const h=()=>setHash(window.location.hash||'');window.addEventListener('hashchange',h);return ()=>window.removeEventListener('hashchange',h);},[]);
+  if(!cfgOk) return <AuthShell title="Configuração necessária" subtitle="Quase lá">
+    <div style={{background:'#FEF3C7',border:'1px solid #D97706',borderRadius:10,padding:16,fontSize:13,color:'#92400E',lineHeight:1.6}}>
+      Cole suas chaves do Supabase no topo do arquivo <strong>index.html</strong>, nas linhas
+      <code> window.SUPABASE_URL </code> e <code> window.SUPABASE_ANON_KEY </code>. Você encontra esses valores em <strong>Supabase → Project Settings → API</strong>.</div>
+  </AuthShell>;
+  if(loading) return <div className="spinner"/>;
+  if(!user||!org){ return page==='signup'?<SignUp go={setPage}/>:<Login go={setPage}/>; }
+  // rota do desenvolvedor: precisa do #dev na URL E da flag is_developer no banco
+  const wantsDev = (hash||'').toLowerCase().includes('dev');
+  if(wantsDev && isDeveloper) return <DeveloperPanel/>;
+  return <>
+    {org.type==='fabricante'?<FabricanteDashboard/>:<IntegradorDashboard/>}
+    {isDeveloper&&<button onClick={()=>{window.location.hash='dev';}} title="Abrir painel do desenvolvedor" style={{position:'fixed',bottom:74,right:16,zIndex:150,background:'#0f172a',color:'#fff',border:'none',borderRadius:99,padding:'10px 16px',fontSize:12,fontWeight:700,boxShadow:'0 6px 20px rgba(0,0,0,.25)',cursor:'pointer',display:'flex',alignItems:'center',gap:7}}>🛠️ Painel DEV</button>}
+  </>;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<AuthProvider><App/><LgpdBanner/></AuthProvider>);
+// PWA: registra o service worker (caminho relativo p/ funcionar em subpasta do GitHub Pages)
+if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(e=>console.log('SW',e));});}
+</script>
+</body>
+</html>
