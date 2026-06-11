@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Gestão de Canal — Registro e proteção de oportunidades para o seu canal</title>
+<meta name="description" content="Plataforma para fabricantes organizarem o programa de canal: registro de oportunidades, proteção contra conflito, tiers, metas e descontos — do fabricante ao cliente final."/>
+<meta name="theme-color" content="#1A3C6E"/>
+<link rel="icon" type="image/png" href="icon-192.png"/>
+<style>
+  :root{
+    --navy:#1A3C6E; --navy-deep:#0E2038; --blue:#2E6CA8; --sky:#4A9FD4;
+    --teal:#0D9488; --green:#10B981; --ink:#0E2038; --muted:#5A7191;
+    --line:#E2EAF4; --bg:#FFFFFF; --soft:#F4F8FC;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;color:var(--ink);background:var(--bg);line-height:1.6;-webkit-font-smoothing:antialiased;}
+  a{color:inherit;text-decoration:none;}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px;}
+
+  /* Header */
+  header{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);}
+  .nav{display:flex;align-items:center;justify-content:space-between;height:64px;}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;color:var(--navy);font-size:17px;}
+  .nav-links{display:flex;align-items:center;gap:26px;font-size:14px;color:var(--muted);}
+  .nav-links a:hover{color:var(--navy);}
+  .nav-cta{display:flex;align-items:center;gap:10px;}
+  .btn{display:inline-flex;align-items:center;gap:7px;font-weight:700;font-size:14px;padding:10px 18px;border-radius:9px;border:1.5px solid transparent;cursor:pointer;transition:all .15s;white-space:nowrap;}
+  .btn-ghost{color:var(--navy);border-color:var(--line);background:#fff;}
+  .btn-ghost:hover{border-color:var(--sky);}
+  .btn-primary{background:var(--navy);color:#fff;}
+  .btn-primary:hover{background:var(--blue);}
+  .btn-lg{padding:14px 26px;font-size:15px;}
+  @media(max-width:760px){.nav-links{display:none;}}
+
+  /* Hero */
+  .hero{position:relative;padding:72px 0 56px;background:linear-gradient(165deg,#0E2038 0%,#16335c 55%,#1A3C6E 100%);color:#fff;overflow:hidden;}
+  .hero::after{content:"";position:absolute;right:-160px;top:-160px;width:520px;height:520px;border-radius:50%;border:2px dashed rgba(74,159,212,.28);}
+  .hero::before{content:"";position:absolute;right:-40px;top:60px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(13,148,136,.22),transparent 70%);}
+  .hero-inner{position:relative;z-index:2;max-width:680px;}
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--sky);margin-bottom:20px;}
+  .eyebrow span{width:26px;height:1px;background:var(--sky);display:inline-block;}
+  h1{font-size:clamp(30px,5vw,46px);line-height:1.12;font-weight:800;letter-spacing:-.02em;margin-bottom:18px;}
+  h1 .hl{color:var(--sky);}
+  .lead{font-size:17px;color:#C7D6EA;max-width:560px;margin-bottom:30px;}
+  .hero-cta{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:34px;}
+  .hero-cta .btn-primary{background:var(--teal);}
+  .hero-cta .btn-primary:hover{background:var(--green);}
+  .hero-cta .btn-ghost{background:transparent;color:#fff;border-color:rgba(255,255,255,.3);}
+  .hero-cta .btn-ghost:hover{border-color:#fff;}
+  .trust{font-size:13px;color:#9DB4D0;}
+
+  /* Flow strip (signature element) */
+  .flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;}
+  .flow-node{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:99px;padding:7px 15px;font-size:13px;font-weight:600;color:#E3EDF8;}
+  .flow-arrow{color:var(--sky);font-size:14px;}
+  @media(max-width:560px){.flow{font-size:12px;}.flow-node{padding:6px 11px;font-size:12px;}}
+
+  /* Sections */
+  section{padding:64px 0;}
+  .sec-head{max-width:620px;margin-bottom:40px;}
+  .sec-eyebrow{font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);margin-bottom:12px;}
+  h2{font-size:clamp(24px,3.5vw,32px);font-weight:800;letter-spacing:-.02em;color:var(--navy);margin-bottom:14px;line-height:1.2;}
+  .sec-sub{font-size:16px;color:var(--muted);}
+
+  /* Pilares transparência + segurança */
+  .pillars{display:grid;grid-template-columns:1fr 1fr;gap:22px;}
+  @media(max-width:760px){.pillars{grid-template-columns:1fr;}}
+  .pillar{background:#fff;border:1px solid var(--line);border-radius:16px;padding:30px 28px;position:relative;overflow:hidden;}
+  .pillar.dark{background:linear-gradient(165deg,#16335c,#0E2038);color:#fff;border-color:transparent;}
+  .pillar.dark::after{content:"";position:absolute;right:-80px;bottom:-80px;width:240px;height:240px;border-radius:50%;border:2px dashed rgba(74,159,212,.2);}
+  .pillar-ic{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:23px;margin-bottom:16px;background:var(--soft);}
+  .pillar.dark .pillar-ic{background:rgba(255,255,255,.1);}
+  .pillar h3{font-size:20px;font-weight:800;margin-bottom:8px;color:var(--navy);letter-spacing:-.01em;}
+  .pillar.dark h3{color:#fff;}
+  .pillar > p{font-size:14.5px;color:var(--muted);margin-bottom:18px;}
+  .pillar.dark > p{color:#C7D6EA;}
+  .plist{list-style:none;position:relative;z-index:2;}
+  .plist li{font-size:14px;padding:9px 0 9px 28px;position:relative;color:#334;border-top:1px solid var(--line);}
+  .pillar.dark .plist li{color:#DDE8F4;border-color:rgba(255,255,255,.12);}
+  .plist li:first-child{border-top:none;}
+  .plist li::before{content:"";position:absolute;left:2px;top:15px;width:8px;height:8px;border-radius:50%;background:var(--teal);}
+  .pillar.dark .plist li::before{background:var(--sky);}
+
+  /* Features grid */
+  .features{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;}
+  .feat{background:#fff;border:1px solid var(--line);border-radius:14px;padding:24px;transition:all .2s;}
+  .feat:hover{border-color:var(--sky);box-shadow:0 12px 28px rgba(26,60,110,.08);transform:translateY(-2px);}
+  .feat-ic{width:44px;height:44px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:21px;margin-bottom:14px;background:var(--soft);}
+  .feat h3{font-size:16px;font-weight:700;color:var(--navy);margin-bottom:7px;}
+  .feat p{font-size:14px;color:var(--muted);}
+
+  /* Problem/solution band */
+  .band{background:var(--soft);}
+  .band-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;}
+  .stat{background:#fff;border:1px solid var(--line);border-radius:14px;padding:26px 22px;}
+  .stat .big{font-size:30px;font-weight:800;color:var(--teal);letter-spacing:-.02em;}
+  .stat .lbl{font-size:14px;color:var(--muted);margin-top:4px;}
+
+  /* How it works */
+  .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;counter-reset:step;}
+  .step{position:relative;padding:24px;background:#fff;border:1px solid var(--line);border-radius:14px;}
+  .step-n{font-size:13px;font-weight:800;color:#fff;background:var(--navy);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;}
+  .step h3{font-size:15.5px;font-weight:700;color:var(--navy);margin-bottom:6px;}
+  .step p{font-size:13.5px;color:var(--muted);}
+
+  /* Pricing */
+  .plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px;margin-top:8px;}
+  .plan{background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:28px 24px;display:flex;flex-direction:column;}
+  .plan.feat-plan{border-color:var(--teal);box-shadow:0 14px 34px rgba(13,148,136,.12);position:relative;}
+  .plan-tag{position:absolute;top:-11px;left:24px;background:var(--teal);color:#fff;font-size:11px;font-weight:700;padding:3px 11px;border-radius:99px;letter-spacing:.03em;}
+  .plan h3{font-size:18px;font-weight:800;color:var(--navy);margin-bottom:6px;}
+  .plan .price{font-size:32px;font-weight:800;color:var(--ink);letter-spacing:-.02em;margin:6px 0 2px;}
+  .plan .price small{font-size:14px;font-weight:600;color:var(--muted);}
+  .plan .pdesc{font-size:13px;color:var(--muted);margin-bottom:16px;min-height:20px;}
+  .plan ul{list-style:none;margin:0 0 22px;flex:1;}
+  .plan li{font-size:14px;color:#334;padding:7px 0 7px 26px;position:relative;}
+  .plan li::before{content:"✓";position:absolute;left:0;color:var(--green);font-weight:800;}
+  .plan .btn{justify-content:center;width:100%;}
+  .plans-loading{color:var(--muted);font-size:14px;padding:20px 0;}
+  .plans-note{font-size:13px;color:var(--muted);margin-top:18px;text-align:center;}
+
+  /* Final CTA */
+  .final{background:linear-gradient(165deg,#16335c,#0E2038);color:#fff;border-radius:22px;padding:52px 40px;text-align:center;position:relative;overflow:hidden;}
+  .final::after{content:"";position:absolute;left:50%;top:-120px;transform:translateX(-50%);width:380px;height:380px;border-radius:50%;border:2px dashed rgba(74,159,212,.22);}
+  .final h2{color:#fff;position:relative;z-index:2;}
+  .final p{color:#C7D6EA;font-size:16px;max-width:480px;margin:0 auto 26px;position:relative;z-index:2;}
+  .final .hero-cta{justify-content:center;position:relative;z-index:2;}
+
+  /* Footer */
+  footer{border-top:1px solid var(--line);padding:36px 0;color:var(--muted);font-size:13.5px;}
+  .foot-grid{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;}
+  .foot-brand{display:flex;align-items:center;gap:9px;font-weight:700;color:var(--navy);}
+
+  .logo-svg{flex-shrink:0;}
+  @media(max-width:600px){section{padding:48px 0;}.hero{padding:54px 0 44px;}.final{padding:40px 22px;}}
+  *:focus-visible{outline:2px solid var(--sky);outline-offset:2px;}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto;}}
+</style>
+</head>
+<body>
+
+<!-- Logo SVG reutilizável -->
+<svg width="0" height="0" style="position:absolute"><defs><g id="selo">
+  <circle cx="32" cy="32" r="26" fill="none" stroke="#4A9FD4" stroke-width="3.5" stroke-dasharray="7 6"/>
+  <circle cx="32" cy="32" r="17" fill="#1A3C6E"/>
+  <path d="M24 32 L29.5 37.5 L41 26" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+</g></defs></svg>
+
+<header>
+  <div class="wrap nav">
+    <div class="brand">
+      <svg class="logo-svg" width="30" height="30" viewBox="0 0 64 64"><use href="#selo"/></svg>
+      Gestão de Canal
+    </div>
+    <nav class="nav-links">
+      <a href="#funcionalidades">Funcionalidades</a>
+      <a href="#confianca">Segurança</a>
+      <a href="#como-funciona">Como funciona</a>
+      <a href="#planos">Planos</a>
+    </nav>
+    <div class="nav-cta">
+      <a class="btn btn-ghost" href="app.html">Acessar conta</a>
+      <a class="btn btn-primary" href="app.html#signup">Criar conta</a>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="wrap hero-inner">
+    <div class="eyebrow"><span></span> Programa de canal para fabricantes</div>
+    <h1>Pare de perder margem com <span class="hl">conflito de canal</span>. Proteja cada oportunidade.</h1>
+    <p class="lead">A Gestão de Canal dá ao fabricante o controle total do programa de parceiros: o integrador registra o projeto, o sistema garante que ninguém pise no negócio do outro, e cada desconto sai com aprovação e rastro. Menos atrito, mais conversão, zero planilha.</p>
+    <div class="hero-cta">
+      <a class="btn btn-primary btn-lg" href="app.html#signup">Começar grátis por 14 dias</a>
+      <a class="btn btn-ghost btn-lg" href="app.html">Acessar minha conta</a>
+    </div>
+    <p class="trust">Sem cartão para testar · Configuração em minutos · Seus dados protegidos</p>
+    <div class="flow">
+      <div class="flow-node">🏭 Fabricante</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node">📦 Distribuidor</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node">🔧 Integrador</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node">🤝 Cliente final</div>
+    </div>
+  </div>
+</div>
+
+<!-- PROBLEMA / VALOR -->
+<section class="band">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-eyebrow">O problema que resolvemos</div>
+      <h2>Sem registro, o canal vira terra de ninguém — e quem paga é a sua margem.</h2>
+      <p class="sec-sub">Vários integradores atrás do mesmo cliente, descontos concedidos duas vezes, brigas por comissão e nenhum histórico para arbitrar. A Gestão de Canal acaba com isso dando regra clara, prova e proteção a cada oportunidade.</p>
+    </div>
+    <div class="band-grid">
+      <div class="stat"><div class="big">+ conversão</div><div class="lbl">parceiros engajados registram mais e disputam menos entre si</div></div>
+      <div class="stat"><div class="big">– conflito</div><div class="lbl">o sistema avisa antes de dois integradores colidirem no mesmo negócio</div></div>
+      <div class="stat"><div class="big">+ controle</div><div class="lbl">cada desconto sai com aprovação, registro e rastreabilidade</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- FUNCIONALIDADES -->
+<section id="funcionalidades">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-eyebrow">Funcionalidades</div>
+      <h2>Tudo que o programa de canal precisa, num só lugar.</h2>
+    </div>
+    <div class="features">
+      <div class="feat"><div class="feat-ic">📝</div><h3>Registro de oportunidades</h3><p>O integrador registra o projeto em 3 passos, escolhe a categoria e anexa as evidências. Cada registro ganha número, validade e status.</p></div>
+      <div class="feat"><div class="feat-ic">🛡️</div><h3>Proteção contra conflito</h3><p>O sistema cruza cliente final, obra e endereço entre os integradores e alerta quando dois projetos colidem — antes de virar problema comercial.</p></div>
+      <div class="feat"><div class="feat-ic">🏅</div><h3>Tiers e metas</h3><p>Defina metas por integrador. Quem bate a meta recebe sugestão de promoção de tier, que você aprova com um clique.</p></div>
+      <div class="feat"><div class="feat-ic">💰</div><h3>Descontos por categoria</h3><p>Configure a política de descontos por sistema, categoria e nível. O integrador vê o desconto aplicável na hora de registrar.</p></div>
+      <div class="feat"><div class="feat-ic">📊</div><h3>Dashboard e relatórios</h3><p>Acompanhe pipeline, conversões, conflitos e evolução mês a mês. Exporte indicadores em PDF e CSV.</p></div>
+      <div class="feat"><div class="feat-ic">🧾</div><h3>Faturas e assinatura</h3><p>Cobrança recorrente automática, com faturas pagas, próximas e previsão dos próximos meses — tudo registrado na plataforma.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- COMO FUNCIONA -->
+<section id="como-funciona" class="band">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-eyebrow">Como funciona</div>
+      <h2>Do cadastro ao registro protegido em quatro passos.</h2>
+    </div>
+    <div class="steps">
+      <div class="step"><div class="step-n">1</div><h3>Fabricante configura</h3><p>Cadastra seus sistemas, marcas, política de descontos e convida os integradores do canal.</p></div>
+      <div class="step"><div class="step-n">2</div><h3>Integrador registra</h3><p>Registra a oportunidade com cliente, obra, categoria e evidências do engajamento real.</p></div>
+      <div class="step"><div class="step-n">3</div><h3>Sistema protege</h3><p>Valida o limite de registros ativos e verifica conflito com outros projetos do canal.</p></div>
+      <div class="step"><div class="step-n">4</div><h3>Fabricante aprova</h3><p>Aprova o registro, concede o desconto e acompanha a conversão até o cliente final.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- TRANSPARÊNCIA + SEGURANÇA -->
+<section id="confianca">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-eyebrow">Transparência e segurança</div>
+      <h2>Toda oportunidade registrada fica protegida — e visível para quem precisa.</h2>
+      <p class="sec-sub">Confiança é o que sustenta um programa de canal. Por isso cada registro tem dono, prova e histórico: ninguém é passado para trás, e ninguém fica no escuro.</p>
+    </div>
+    <div class="pillars">
+
+      <div class="pillar">
+        <div class="pillar-ic">🔍</div>
+        <h3>Transparência em todo o processo</h3>
+        <p>Do registro à conversão, cada passo fica registrado e acessível. O integrador acompanha sua oportunidade em tempo real, e o fabricante enxerga todo o canal.</p>
+        <ul class="plist">
+          <li>Linha do tempo completa: quem fez o quê e quando, em cada projeto</li>
+          <li>Status sempre visível: pendente, aprovado, em conflito ou convertido</li>
+          <li>Cada alteração de desconto ou categoria fica registrada com autor</li>
+          <li>Link de acompanhamento para consultar o status do registro</li>
+          <li>Histórico exportável para auditoria a qualquer momento</li>
+        </ul>
+      </div>
+
+      <div class="pillar dark">
+        <div class="pillar-ic">🛡️</div>
+        <h3>Segurança do registro de oportunidade</h3>
+        <p>Quem registra primeiro e comprova o engajamento tem a oportunidade protegida. O sistema garante a regra — não o relacionamento pessoal.</p>
+        <ul class="plist">
+          <li>Número de registro único e exclusivo para cada oportunidade</li>
+          <li>Validade por categoria, com prazo claro para manter a proteção</li>
+          <li>Detecção automática de conflito por cliente, obra e endereço</li>
+          <li>Evidências obrigatórias comprovam o engajamento real no projeto</li>
+          <li>Controle de acesso por papel: cada um vê e faz só o que lhe cabe</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- PLANOS -->
+<section id="planos">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-eyebrow">Planos</div>
+      <h2>Escolha pelo tamanho do seu canal.</h2>
+      <p class="sec-sub">O preço acompanha o número de integradores que você gerencia. Comece com 14 dias de teste, sem cartão.</p>
+    </div>
+    <div id="plans-container" class="plans">
+      <div class="plans-loading">Carregando planos…</div>
+    </div>
+    <p class="plans-note">Todos os planos incluem registro de oportunidades, detecção de conflito, tiers, dashboard e suporte. Precisa de algo maior? <a href="mailto:contato@gestaodecanal.com.br" style="color:var(--teal);font-weight:700;">Fale com a gente</a>.</p>
+  </div>
+</section>
+
+<!-- CTA FINAL -->
+<section>
+  <div class="wrap">
+    <div class="final">
+      <h2>Pronto para proteger o seu canal?</h2>
+      <p>Crie sua conta, configure seu programa e comece a registrar oportunidades hoje. 14 dias grátis.</p>
+      <div class="hero-cta">
+        <a class="btn btn-primary btn-lg" href="app.html#signup" style="background:var(--teal);">Criar conta grátis</a>
+        <a class="btn btn-ghost btn-lg" href="app.html" style="background:transparent;color:#fff;border-color:rgba(255,255,255,.3);">Acessar conta</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot-grid">
+    <div class="foot-brand">
+      <svg width="24" height="24" viewBox="0 0 64 64"><use href="#selo"/></svg>
+      Gestão de Canal
+    </div>
+    <div>contato@gestaodecanal.com.br</div>
+    <div>© <span id="year"></span> Gestão de Canal. Todos os direitos reservados.</div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  document.getElementById('year').textContent = new Date().getFullYear();
+
+  // Busca os planos ativos direto do Supabase (sempre atualizados, sem cravar preço fixo)
+  const SUPABASE_URL = "https://ulkvxnulvbyifeihznem.supabase.co";
+  const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsa3Z4bnVsdmJ5aWZlaWh6bmVtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MDYxNzgsImV4cCI6MjA5NjE4MjE3OH0.A_nAWhjYJmJuk7paUw_wKP_FwaM2Ta7OGE41GQOo-cY";
+
+  const fmtBRL = (cents) => 'R$ ' + ((cents||0)/100).toLocaleString('pt-BR', {minimumFractionDigits:2});
+
+  (async () => {
+    const cont = document.getElementById('plans-container');
+    try {
+      const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+      const { data, error } = await sb.from('plans').select('*').eq('active', true).order('price_cents');
+      if (error) throw error;
+      if (!data || !data.length) { cont.innerHTML = '<div class="plans-loading">Planos em breve. Fale com a gente: contato@gestaodecanal.com.br</div>'; return; }
+
+      // destaca o plano do meio (ou o segundo) como recomendado
+      const destaque = data.length >= 3 ? 1 : (data.length === 2 ? 1 : 0);
+
+      cont.innerHTML = data.map((p, i) => {
+        const enterprise = (p.max_integrators || 0) > 100;
+        const precoHtml = enterprise
+          ? '<div class="price">Sob consulta</div>'
+          : '<div class="price">' + fmtBRL(p.price_cents) + '<small>/mês</small></div>';
+        const limite = p.max_integrators
+          ? 'Até ' + p.max_integrators + ' integradores'
+          : 'Integradores conforme contratação';
+        const ctaTxt = enterprise ? 'Falar com vendas' : 'Começar teste grátis';
+        const ctaHref = enterprise ? 'mailto:contato@gestaodecanal.com.br?subject=Plano%20personalizado%20Gestao%20de%20Canal' : 'app.html#signup';
+        return ''
+          + '<div class="plan' + (i===destaque ? ' feat-plan' : '') + '">'
+          +   (i===destaque ? '<div class="plan-tag">Mais escolhido</div>' : '')
+          +   '<h3>' + (p.name||'Plano') + '</h3>'
+          +   precoHtml
+          +   '<div class="pdesc">' + limite + '</div>'
+          +   '<ul>'
+          +     '<li>Registro de oportunidades</li>'
+          +     '<li>Detecção de conflito</li>'
+          +     '<li>Tiers, metas e descontos</li>'
+          +     '<li>Dashboard e relatórios</li>'
+          +   '</ul>'
+          +   '<a class="btn ' + (i===destaque ? 'btn-primary' : 'btn-ghost') + '" href="' + ctaHref + '">' + ctaTxt + '</a>'
+          + '</div>';
+      }).join('');
+    } catch (e) {
+      cont.innerHTML = '<div class="plans-loading">Não foi possível carregar os planos agora. Crie sua conta e veja os planos dentro da plataforma, ou fale com contato@gestaodecanal.com.br</div>';
+    }
+  })();
+</script>
+</body>
+</html>
