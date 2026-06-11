@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Gestão de Canal · Conta confirmada</title>
+<style>
+  :root{--navy:#1A3C6E;--blue:#2E6CA8;--teal:#0D9488;--green:#10B981;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(160deg,#0B1F3A,#12305A);color:#fff;padding:24px;}
+  .card{background:#fff;color:#0E2038;border-radius:18px;max-width:440px;width:100%;padding:40px 32px;text-align:center;
+    box-shadow:0 30px 80px rgba(0,0,0,.35);}
+  .brand{font-size:26px;font-weight:800;color:var(--navy);margin-bottom:8px;}
+  .brand .p{color:var(--teal);}
+  .check{width:74px;height:74px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;
+    margin:18px auto 20px;font-size:40px;color:#fff;animation:pop .5s cubic-bezier(.2,.9,.25,1);}
+  @keyframes pop{from{transform:scale(.6);opacity:0;}to{transform:scale(1);opacity:1;}}
+  h1{font-size:21px;color:var(--navy);margin-bottom:10px;}
+  p{font-size:15px;color:#48607C;line-height:1.55;margin-bottom:24px;}
+  .btn{display:inline-block;background:var(--navy);color:#fff;text-decoration:none;font-weight:700;font-size:15px;
+    padding:13px 28px;border-radius:10px;transition:opacity .15s;}
+  .btn:hover{opacity:.9;}
+  .err h1{color:#B45309;}
+  .err .check{background:#D97706;}
+  .small{font-size:12px;color:#90A4BE;margin-top:18px;}
+</style>
+</head>
+<body>
+  <div class="card" id="card">
+    <div class="brand">Gestão de Canal</div>
+    <div class="check">✓</div>
+    <h1>Conta confirmada!</h1>
+    <p>Seu e-mail foi verificado com sucesso. Agora é só entrar para começar a usar o Gestão de Canal.</p>
+    <a class="btn" href="./index.html">Fazer login</a>
+    <div class="small">Se o botão não funcionar, abra o app e use a opção "Entrar".</div>
+  </div>
+
+<script>
+  // Se o Supabase enviar um erro no hash da URL (ex.: link expirado), mostra mensagem adequada.
+  (function(){
+    const h=window.location.hash||'';
+    if(h.indexOf('error')>=0){
+      const card=document.getElementById('card');
+      card.className='card err';
+      let msg='O link de confirmação é inválido ou expirou.';
+      if(h.indexOf('expired')>=0)msg='O link de confirmação expirou. Faça login para receber um novo, ou cadastre-se novamente.';
+      card.innerHTML='<div class="brand">Gestão de Canal</div>'+
+        '<div class="check">!</div>'+
+        '<h1>Não foi possível confirmar</h1>'+
+        '<p>'+msg+'</p>'+
+        '<a class="btn" href="./index.html">Ir para o login</a>';
+    }
+  })();
+</script>
+</body>
+</html>
